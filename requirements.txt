@@ -1,0 +1,8 @@
+# Core runtime dependencies
+Flask>=3.0.0
+numpy>=1.26.0
+opencv-python>=4.10.0
+pandas>=2.2.0
+Pillow>=10.0.0
+statsmodels>=0.14.0
+

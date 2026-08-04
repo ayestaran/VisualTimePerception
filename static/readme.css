@@ -1,0 +1,130 @@
+:root {
+  --bg: #0e1520;
+  --panel: #121f30;
+  --ink: #dce8f7;
+  --accent: #2f6ea1;
+  --accent-strong: #3d84bf;
+  --panel-border: #23415f;
+  --surface: #15283d;
+  --code-bg: #0f1d2d;
+}
+
+body.light-theme {
+  --bg: #f0f7ff;
+  --panel: #ffffff;
+  --ink: #10233a;
+  --accent: #1f5f8b;
+  --accent-strong: #123e6b;
+  --panel-border: #b4d4f0;
+  --surface: #f7fbff;
+  --code-bg: #eef6ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background: radial-gradient(circle at 10% 15%, #14263a 0%, #0f1b2a 50%, #0b131d 100%);
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+body.light-theme {
+  background: radial-gradient(circle at 10% 15%, #cfe8ff 0%, #f5fbff 50%, #e2f3ff 100%);
+}
+
+.readme-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px 20px 34px;
+  position: relative;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--panel-border);
+  background: var(--surface);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+#themeIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f3d46d;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme #themeIcon {
+  background: #254f78;
+  box-shadow: inset -5px -2px 0 0 #d6e8fa;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.hero h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.7rem, 3.2vw, 2.6rem);
+}
+
+.hero p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.hero a {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hero a:hover {
+  text-decoration: underline;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin: 14px 0;
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+}
+
+.panel ul,
+.panel ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.panel li {
+  margin: 7px 0;
+}
+
+pre {
+  margin: 0;
+  background: var(--code-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+code {
+  font-family: "Courier New", monospace;
+}

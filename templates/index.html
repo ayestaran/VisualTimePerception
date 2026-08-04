@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Symbolic Canvas Clock</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="card">
+        <button id="themeToggleBtn" class="theme-toggle" type="button" aria-label="Toggle dark and light theme">
+          <span id="themeIcon" aria-hidden="true"></span>
+        </button>
+        <h1>Visual Time Perception &amp; Symbolic Reasoning - Single &amp; Continuous Conversion</h1>
+        <p class="byline">
+          Module 7WCM2018-0509-2025 Assignment - Custom Mini Project by Franz Ayestaran
+        </p>
+        <div class="visual-row">
+          <div class="clock-column">
+            <canvas id="clockCanvas" width="420" height="420"></canvas>
+            <div class="clock-theme-picker">
+              <label class="theme-select-label" for="themeSelect">Theme</label>
+              <select id="themeSelect" aria-label="Select clock theme"></select>
+            </div>
+          </div>
+          <section class="histogram-panel">
+            <h3>Live Processing Histogram</h3>
+            <canvas id="histogramCanvas" width="560" height="420"></canvas>
+            <p id="realtimeLimitInfo" class="realtime-limit-info" aria-live="polite">Realtime max session: loading...</p>
+            <p class="histogram-caption">Angle bins (0-360) and mask pixel-count diagnostics (not time units) update every symbolic conversion.</p>
+          </section>
+        </div>
+        <div class="controls">
+          <button id="flipBtn" type="button">Flip Clock</button>
+          <button id="resetClockBtn" type="button">Reset Clock Face</button>
+          <button id="randomThemeBtn" type="button">Randomize Clock Theme</button>
+          <button id="clearDataBtn" type="button" hidden>Clear Data</button>
+          <button id="clearWorkspaceBtn" type="button">Clear Workspace</button>
+          <button id="symbolicBtn" type="button">Capture Snapshot + Convert to Symbolic</button>
+          <button id="realtimeBtn" type="button">Start Realtime Capture + Process</button>
+          <button id="exportLogBtn" type="button">Export Symbolic Log JSON</button>
+          <button id="openReadmeBtn" type="button">README</button>
+        </div>
+        <div class="toggles-inline" aria-label="Theme and rotation toggles">
+          <label class="toggle-row" for="randomizeEverySecondToggle">
+            <input id="randomizeEverySecondToggle" type="checkbox" />
+            Randomize era theme every second
+          </label>
+          <span class="toggle-separator" aria-hidden="true">-</span>
+          <label class="toggle-row" for="rotationIncrementToggle">
+            <input id="rotationIncrementToggle" type="checkbox" />
+            Increment clock rotation every second
+          </label>
+          <span class="toggle-separator" aria-hidden="true">-</span>
+          <label class="toggle-row" for="randomFlipToggle">
+            <input id="randomFlipToggle" type="checkbox" />
+            Random flip clock every second
+          </label>
+          <span class="toggle-separator" aria-hidden="true">-</span>
+          <label class="toggle-row" for="rotate3DToggle">
+            <input id="rotate3DToggle" type="checkbox" />
+            3D rotate with back view
+          </label>
+          <span class="toggle-separator" aria-hidden="true">-</span>
+          <label class="toggle-row" for="extraLineToggle">
+            <input id="extraLineToggle" type="checkbox" />
+            Extra distractor line
+          </label>
+          <span class="toggle-separator" aria-hidden="true">-</span>
+          <label class="toggle-row" for="artifactSafeModeToggle">
+            <input id="artifactSafeModeToggle" type="checkbox" checked />
+            Artifact-safe mode
+          </label>
+        </div>
+        <div class="processed-output-layout">
+          <div class="processed-output-column">
+            <div id="processedImagePanel" class="processed-image-panel" aria-live="polite">
+              <div class="processed-image-header">
+                <strong>Processed Image</strong>
+                <a id="processedImageDownloadLink" class="processed-image-download" href="#" hidden>Download Processed Image</a>
+              </div>
+              <div id="processedImagePreview" class="processed-image-preview">
+                <span class="processed-image-placeholder">No processed image yet. Convert to Symbolic to save one.</span>
+              </div>
+            </div>
+            <div id="opencvStagesPanel" class="opencv-stages-panel" aria-live="polite">
+              <div class="processed-image-header">
+                <strong>OpenCV Processing Stages</strong>
+                <div class="opencv-stages-header-actions">
+                  <label for="opencvStageSelect" class="opencv-stage-select-label">Stage</label>
+                  <select id="opencvStageSelect" class="opencv-stage-select" aria-label="Select OpenCV processing stage">
+                    <option value="edges" selected>Edges</option>
+                    <option value="rgb">RGB</option>
+                    <option value="grayscale">Grayscale</option>
+                    <option value="threshold">Threshold</option>
+                    <option value="blur">Blur</option>
+                    <option value="contours">Contours</option>
+                    <option value="cropped">Cropped</option>
+                  </select>
+                  <a id="opencvStagesDownloadLink" class="processed-image-download" href="#" hidden>Download OpenCV Processing Stages</a>
+                </div>
+              </div>
+              <div id="opencvStagesList" class="opencv-stages-list">
+                <span class="processed-image-placeholder">No OpenCV stages yet. Convert to Symbolic to generate them.</span>
+              </div>
+            </div>
+          </div>
+          <div class="symbolic-output-column">
+            <label for="symbolicOutput">Symbolic Output</label>
+            <textarea id="symbolicOutput" rows="12" readonly></textarea>
+          </div>
+        </div>
+        <label for="probabilisticReasoningOutput">Probabilistic Logic Reasoning</label>
+        <textarea id="probabilisticReasoningOutput" rows="12" readonly></textarea>
+        <label for="symbolicLogOutput">Symbolic Output Log</label>
+        <textarea id="symbolicLogOutput" rows="10" readonly></textarea>
+
+        <section id="groundingStudio" class="grounding-studio" aria-live="polite">
+          <div class="grounding-header">
+            <h3>Grounding Preset Studio</h3>
+            <p>Compose reusable symbolic grounding strategies by dragging presets into the script generator. Apply rules to current symbolic output, copy as JSON, or clear to start over. Scripts persist across page refresh.</p>
+          </div>
+          <div class="grounding-layout">
+            <div class="grounding-column">
+              <h4>Preset Library</h4>
+              <div id="groundingPresetLibrary" class="grounding-list" aria-label="Grounding preset library"></div>
+            </div>
+            <div class="grounding-column">
+              <h4>Script Generator</h4>
+              <div
+                id="groundingScriptDropzone"
+                class="grounding-dropzone"
+                aria-label="Grounding script generator drop zone"
+              >
+                Drop presets here to build a grounding script.
+              </div>
+              <div id="groundingScriptSequence" class="grounding-sequence" aria-label="Grounding preset sequence"></div>
+              <div class="grounding-actions">
+                <button id="addAllGroundingPresetsBtn" type="button">Add All Presets</button>
+                <button id="applyGroundingScriptBtn" type="button">Apply Presets</button>
+                <button id="copyGroundingScriptBtn" type="button">Copy Script</button>
+                <button id="clearGroundingScriptBtn" type="button">Clear Script</button>
+              </div>
+              <label for="groundingScriptOutput">Generated Grounding Script</label>
+              <textarea id="groundingScriptOutput" rows="9" readonly></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section id="experimentsPanel" class="experiments-panel" aria-live="polite">
+          <div class="experiments-header">
+            <h3>Reproducible Experiments – Run Sweep</h3>
+            <p style="font-size: 0.9rem; margin: 0 0 8px 0; opacity: 0.85;">Execute a full robustness sweep with 10 degradation conditions (rotate, blur, noise, occlusion, mirror, etc.). Generates synthetic clock images, tests symbolic detection, and runs statistical significance tests. Condition sample thumbnails appear during the run and persist in browser cache.</p>
+            <div class="experiments-controls">
+              <label for="expSamplesInput">Samples/condition</label>
+              <input id="expSamplesInput" type="number" min="1" max="500" value="40" />
+              <label for="expStatsIterationsInput">Stats iterations</label>
+              <input id="expStatsIterationsInput" type="number" min="100" max="50000" value="2000" />
+              <button id="runExperimentsBtn" type="button">Run Sweep</button>
+              <button id="clearExperimentsBtn" type="button">Clear Sweep Results</button>
+              <button id="refreshExperimentsBtn" type="button">Refresh Summary</button>
+              <button id="downloadConditionMatrixBtn" type="button">Download Condition Matrix</button>
+              <button id="downloadMetricsBtn" type="button">Download Metrics CSV</button>
+              <button id="downloadStatsCsvBtn" type="button">Download Stats CSV</button>
+              <button id="downloadStatsSummaryBtn" type="button">Download Stats Summary</button>
+            </div>
+          </div>
+          <p id="experimentsStatus" class="experiments-status">No experiment run yet.</p>
+          <div id="sweepProgressWrap" class="llm-progress-wrap">
+            <div
+              id="sweepProgressTrack"
+              class="llm-progress-track"
+              role="progressbar"
+              aria-label="Experiment sweep progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <div id="sweepProgressFill" class="llm-progress-fill"></div>
+            </div>
+            <span id="sweepProgressLabel" class="llm-progress-label">Idle</span>
+          </div>
+          <div id="sweepStageList" class="llm-stage-list" aria-label="Experiment sweep stages">
+            <span class="llm-stage-chip" data-stage-key="queued">Queued</span>
+            <span class="llm-stage-chip" data-stage-key="running">Sampling</span>
+            <span class="llm-stage-chip" data-stage-key="stats">Stats</span>
+            <span class="llm-stage-chip" data-stage-key="done">Done</span>
+          </div>
+          <div id="sweepConditionPreviews" class="sweep-thumbnails" hidden aria-label="Condition sample thumbnails"></div>
+          <label for="experimentsSummaryOutput">Stats Summary Preview</label>
+          <textarea id="experimentsSummaryOutput" rows="14" readonly></textarea>
+        </section>
+
+      </section>
+    </main>
+
+    <!-- Password Dialog Modal -->
+    <div id="passwordModal" class="password-modal" style="display: none;">
+      <div class="password-modal-content">
+        <h2 id="passwordModalTitle">Enter Password</h2>
+        <input
+          id="passwordInput"
+          type="password"
+          placeholder="Enter password"
+          aria-label="Password input"
+          autocomplete="off"
+        />
+        <div class="password-modal-buttons">
+          <button id="passwordModalSubmit" type="button">Submit</button>
+          <button id="passwordModalCancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lightbox for sweep condition thumbnails -->
+    <div id="sweepLightbox" class="sweep-lightbox" hidden role="dialog" aria-modal="true" aria-label="Condition image expanded view">
+      <button class="sweep-lightbox-close" id="sweepLightboxClose" type="button" aria-label="Close">&times;</button>
+      <figure class="sweep-lightbox-figure">
+        <img id="sweepLightboxImg" src="" alt="" />
+        <figcaption id="sweepLightboxCaption" class="sweep-lightbox-caption"></figcaption>
+      </figure>
+    </div>
+
+    <div
+      id="runtimeConfig"
+      hidden
+      data-realtime-capture-max-seconds='{{ runtime_config.realtime_capture_max_seconds | tojson | forceescape }}'
+      data-password-prompt-requirements='{{ runtime_config.password_prompt_requirements | tojson | forceescape }}'
+    ></div>
+    <script>
+      const runtimeConfigElement = document.getElementById("runtimeConfig");
+      window.APP_RUNTIME_CONFIG = {
+        realtimeCaptureMaxSeconds: runtimeConfigElement
+          ? JSON.parse(runtimeConfigElement.dataset.realtimeCaptureMaxSeconds || "null")
+          : null,
+        passwordPromptRequirements: runtimeConfigElement
+          ? JSON.parse(runtimeConfigElement.dataset.passwordPromptRequirements || "{}")
+          : {}
+      };
+    </script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

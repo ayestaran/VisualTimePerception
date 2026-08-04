@@ -1,0 +1,11 @@
+condition_id,family,severity,description
+baseline_clean,baseline,none,Clean synthetic render
+rotate_8deg,rotation,low,Rotate clock image by 8 degrees
+rotate_16deg,rotation,medium,Rotate clock image by 16 degrees
+gaussian_blur_5,blur,medium,Gaussian blur kernel 5
+noise_std_8,noise,medium,Gaussian noise std=8
+distractor_line,artifact,medium,Add extra dark line artifact
+mirror_tracked,orientation,low,Mirrored image with correct metadata
+mirror_untracked,orientation,high,Mirrored image with incorrect metadata
+occlusion_patch,occlusion,medium,Local bright rectangular occlusion
+combined_stress,combined,high,Rotation + blur + noise + line artifact
