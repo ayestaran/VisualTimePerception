@@ -20,6 +20,7 @@ from stats_summary import generate_stats_report
 from symbolic_clock import SymbolicDetectionError, interpret_clock_image
 
 BASE_DIR = Path(__file__).resolve().parent
+README_FILE = BASE_DIR / "README.md"
 SNAPSHOT_DIR = BASE_DIR / "snapshots"
 SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 SNAPSHOT_FILE = SNAPSHOT_DIR / "clock_snapshot.png"
@@ -612,7 +613,11 @@ def index():
 
 @app.route("/project-readme", methods=["GET"])
 def project_readme():
-    return render_template("project_readme.html")
+    try:
+        readme_text = README_FILE.read_text(encoding="utf-8")
+    except OSError:
+        readme_text = "README.md could not be loaded."
+    return render_template("project_readme.html", readme_text=readme_text)
 
 
 @app.route(PROCESSED_IMAGE_ARTIFACT_URL, methods=["GET"])

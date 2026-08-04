@@ -2,7 +2,7 @@
 
 An interactive research and learning environment for symbolic clock interpretation.
 
-The project combines a styled canvas clock generator, realtime capture pipeline, symbolic inference backend, metrics telemetry, grounding-preset scripting, and dataset generation tools for experimentation.
+The project combines a styled canvas clock generator, realtime capture pipeline, symbolic inference backend, metrics telemetry, grounding-preset scripting, and reproducible robustness sweeps.
 
 ## Technical Stack
 
@@ -69,8 +69,8 @@ This system is designed around three goals:
   - Fallback usage summary
 
 ### Data and Workspace Controls
-- Clear Data: clears logs, stats, dataset rows, and grounding script sequence while preserving face settings
-- Clear Workspace: clears data and resets face settings to defaults
+- Clear Workspace: clears symbolic output/history, processed artifacts, and resets face settings to defaults
+- Run Sweep artifacts are preserved when using Clear Workspace
 
 ### Grounding Preset Studio
 - Preset library for grounding strategies
@@ -81,28 +81,6 @@ This system is designed around three goals:
 - Apply presets to live runtime state
 - Copy and clear script actions
 - Persisted script sequence across refresh
-
-### Dataset Workflow
-- Build dataset rows from symbolic frames
-- Filter and search generated samples
-- Collapse/expand groups
-- Copy filtered JSONL rows
-- Save filtered JSONL rows
-
-### LLM Benchmark Workbench (Frontend + Backend)
-- In-app LLM benchmark panel with:
-  - model list input
-  - per-condition question limit
-  - timeout control
-  - run + refresh actions
-- Artifact browser for benchmark outputs with:
-  - filter (all/answers/evaluations/questions)
-  - sort (name/size)
-  - text search
-  - selected artifact count
-  - single-file download buttons
-  - filtered ZIP download
-- Server-backed benchmark execution and artifact serving endpoints
 
 ### Persistence Behavior
 - Persists face state, toggles, selected theme, histories, and generated data
@@ -161,28 +139,7 @@ This system is designed around three goals:
   - Artifacts (CSV + markdown) are downloaded via buttons.
   - If page is refreshed during the sweep, UI will automatically reconnect to in-flight run (showing progress).
 
-- **Thumbnails Persistence:** Condition sample thumbnails are cached in browser localStorage and persist across refresh (unless "Clear Workspace" is clicked).
-
-### LLM Benchmark Comparison (Collapsible Section)
-**Purpose:** Compare multiple LLM models on the same set of clock-reading questions derived from the symbolic experiment metrics.
-
-- **Configuration:**
-  - **Models:** Comma-separated list (e.g., `llama3.2:3b,gemma3:4b`). Models must be available in local Ollama.
-  - **Questions/condition:** Questions sampled per severity level (1–100; default 20).
-  - **Timeout (s):** Per-model per-question timeout (10–1800 seconds; default 120).
-
-- **Run Benchmark Button:** Launches pipeline:
-  1. **Generate questions** from metrics CSV (pulls representative rows per condition/severity).
-  2. **Collect model responses** via Ollama REST API with temperature 0.1 (deterministic).
-  3. **Score answers** (correctness, key factor extraction, completeness).
-  4. **Run stats** (Two-way ANOVA, Tukey HSD). Parse success summary shows JSON parse rates per model.
-
-- **Artifact Browser:**
-  - **Filter, sort, search** across benchmark outputs (questions, answers, evaluations, stats).
-  - **Download single artifacts** or **filtered ZIP** for external analysis.
-  - Detailed CSV with per-sample model predictions and factor-matching scores.
-
-- **Stats Output:** Markdown with parse success rates, descriptive tables, and ANOVA results. If all responses fail to parse, stats are skipped with a diagnostic message.
+- **Thumbnails Persistence:** Condition sample thumbnails are cached in browser localStorage and persist across refresh. They are cleared by **Clear Sweep Results**.
 
 ## Step-by-Step Workflow
 
@@ -193,9 +150,8 @@ This system is designed around three goals:
 5. **Realtime Loop:** Start Realtime Capture + Process. Metrics accumulate. Click again to stop. Controls are locked during realtime.
 6. **Build Grounding:** Drag presets into Script Generator (or Add All Presets), then Apply Presets or Copy Script.
 7. **Run Sweep:** Adjust samples/condition and stats iterations, click Run Sweep. Watch thumbnail grid appear and progress update. Results download via buttons.
-8. **LLM Benchmark:** Enter model list, set per-condition limit, click Run Benchmark (requires Ollama). Browse and download artifacts.
-9. **Clear:** Clear Data resets logs/stats/script but preserves face. Clear Workspace also resets face to defaults.
-10. **Validate:** Run `python self_test_symbolic.py` for reproducible offline checks.
+8. **Clear Workspace:** Reset face settings and clear symbolic/histogram artifacts while preserving Run Sweep results.
+9. **Validate:** Run `python self_test_symbolic.py` for reproducible offline checks.
 
 ## Symbolic Inference Pipeline
 
@@ -272,18 +228,11 @@ Failure response (422) includes:
 - `GET /experiment-summary`
 - `GET /experiment-artifact/<artifact_name>`
 
-### LLM Benchmark Endpoints
-- `POST /run-llm-benchmark`
-- `GET /llm-benchmark-artifacts`
-- `GET /llm-benchmark-summary`
-- `GET /llm-benchmark-artifact/<artifact_name>`
-- `POST /llm-benchmark-artifacts-zip`
-
 ## Project Structure
 
 - app.py: Flask routes and API response behavior
 - symbolic_clock.py: OpenCV-based symbolic extraction and debug metrics
-- static/app.js: UI logic, rendering, realtime loop, persistence, grounding studio, dataset tools
+- static/app.js: UI logic, rendering, realtime loop, persistence, grounding studio, and experiment controls
 - static/style.css: main UI styling
 - templates/index.html: application UI
 - templates/project_readme.html: in-app documentation page
@@ -291,7 +240,7 @@ Failure response (422) includes:
 - launch.sh: process lifecycle helper
 - snapshots/: saved capture assets and orientation metadata
 - static/: generated image/JSON artifacts such as processed_clock.png and processed_clock_data.json
-- results/: experiment sweep outputs, metrics, and benchmark artifacts
+- results/: experiment sweep outputs and statistical artifacts
 
 ## Local Run
 
@@ -369,4 +318,3 @@ python stats_summary.py --metrics-csv results/metrics_by_condition.csv
 - Use Artifact-safe mode for clean grounding baselines.
 - Use perturbation toggles to build invariance training regimes.
 - Use Grounding Preset Studio scripts to document experiment recipes.
-- Use dataset generation tools to build instruction-style data from symbolic traces.

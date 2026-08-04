@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project README | Visual Time Perception & Symbolic Reasoning</title>
+    <title>Project README</title>
     <link rel="stylesheet" href="/static/readme.css" />
   </head>
   <body>
@@ -15,9 +15,7 @@
       <header class="hero">
         <h1>Visual Time Perception &amp; Symbolic Reasoning</h1>
         <p>
-          Architecture, System Design, Conceptual Framework, and Core Development by
-          <a href="https://franz.ayestaran.dev/" target="_blank" rel="noopener noreferrer">Franz Ayestaran</a>
-          / Enhanced Pair Programming with OpenAI GPT
+          An interactive research and learning environment for symbolic clock interpretation.
         </p>
       </header>
 
@@ -55,11 +53,6 @@ POST /symbolic-clock
       GET  /experiment-artifacts
       GET  /experiment-summary
       GET  /experiment-artifact/&lt;artifact_name&gt;
-      POST /run-llm-benchmark
-      GET  /llm-benchmark-artifacts
-      GET  /llm-benchmark-summary
-      GET  /llm-benchmark-artifact/&lt;artifact_name&gt;
-      POST /llm-benchmark-artifacts-zip
 GET  /project-readme</code></pre>
       </section>
 
@@ -67,7 +60,7 @@ GET  /project-readme</code></pre>
         <h2>Design Notes</h2>
         <p>
           The interface supports dark/light themes, realtime symbolic processing, probabilistic symbolic reasoning,
-          reproducible experiment sweeps, multi-model LLM benchmarking, exportable artifacts, and a dedicated
+          reproducible experiment sweeps, exportable artifacts, and a dedicated
           documentation surface in this separate tab.
         </p>
       </section>
@@ -88,7 +81,7 @@ GET  /project-readme</code></pre>
           </li>
           <li><strong>Right side (Histogram):</strong> Shows three diagnostic plots:
             <ul>
-              <li><strong>Angle bins (0–360°):</strong> Histogram of detected hand angle candidates. Tall spikes = good consensus; low/flat = ambiguous detection.</li>
+              <li><strong>Angle bins (0-360°):</strong> Histogram of detected hand angle candidates. Tall spikes = good consensus; low/flat = ambiguous detection.</li>
               <li><strong>Mask strength bars (avg):</strong> Average HSV mask pixel count for each hand (hour, minute, second). Taller bars = stronger color detection.</li>
               <li><strong>Perception error trend:</strong> Running average of hour/minute/second errors. Drooping trend = improving accuracy over frames; flat trend = inconsistent detection.</li>
               <li>Updates every symbolic conversion during realtime capture.</li>
@@ -120,13 +113,13 @@ GET  /project-readme</code></pre>
           <li>Scripts persist across page refresh and are cleared only by "Clear Workspace".</li>
         </ul>
 
-        <h3>Reproducible Experiments – Run Sweep (Collapsible Section)</h3>
+        <h3>Reproducible Experiments - Run Sweep (Collapsible Section)</h3>
         <p><strong>Purpose:</strong> Execute a full robustness benchmark with 10 degradation conditions and statistical analysis.</p>
         <ul>
           <li><strong>Parameters:</strong>
             <ul>
-              <li><strong>Samples/condition:</strong> Number of synthetic clock images per condition (1–500; default 40).</li>
-              <li><strong>Stats iterations:</strong> Bootstrap/permutation iterations for significance testing (100–50,000; default 2,000).</li>
+              <li><strong>Samples/condition:</strong> Number of synthetic clock images per condition (1-500; default 40).</li>
+              <li><strong>Stats iterations:</strong> Bootstrap/permutation iterations for significance testing (100-50,000; default 2,000).</li>
             </ul>
           </li>
           <li><strong>Run Sweep Button:</strong> Launches background sweep thread on the server. Progress bar updates every 1.2s.
@@ -146,33 +139,6 @@ GET  /project-readme</code></pre>
           <li><strong>Thumbnails Persistence:</strong> Condition sample thumbnails are cached in browser localStorage and persist across refresh. They are cleared by "Clear Sweep Results".</li>
         </ul>
 
-        <h3>LLM Benchmark Comparison (Collapsible Section)</h3>
-        <p><strong>Purpose:</strong> Compare multiple LLM models on the same set of clock-reading questions derived from the symbolic experiment metrics.</p>
-        <ul>
-          <li><strong>Configuration:</strong>
-            <ul>
-              <li><strong>Models:</strong> Comma-separated list (e.g., <code>llama3.2:3b,gemma3:4b</code>). Models must be available in local Ollama.</li>
-              <li><strong>Questions/condition:</strong> Questions sampled per severity level (1–100; default 20).</li>
-              <li><strong>Timeout (s):</strong> Per-model per-question timeout (10–1800 seconds; default 120).</li>
-            </ul>
-          </li>
-          <li><strong>Run Benchmark Button:</strong> Launches pipeline:
-            <ol>
-              <li><strong>Generate questions</strong> from metrics CSV (pulls representative rows per condition/severity).</li>
-              <li><strong>Collect model responses</strong> via Ollama REST API with temperature 0.1 (deterministic).</li>
-              <li><strong>Score answers</strong> (correctness, key factor extraction, completeness).</li>
-              <li><strong>Run stats</strong> (Two-way ANOVA, Tukey HSD). Parse success summary shows JSON parse rates per model.</li>
-            </ol>
-          </li>
-          <li><strong>Artifact Browser:</strong>
-            <ul>
-              <li><strong>Filter, sort, search</strong> across benchmark outputs (questions, answers, evaluations, stats).</li>
-              <li><strong>Download single artifacts</strong> or <strong>filtered ZIP</strong> for external analysis.</li>
-              <li>Detailed CSV with per-sample model predictions and factor-matching scores.</li>
-            </ul>
-          </li>
-          <li><strong>Stats Output:</strong> Markdown with parse success rates, descriptive tables, and ANOVA results. If all responses fail to parse, stats are skipped with a diagnostic message.</li>
-        </ul>
       </section>
 
       <section class="panel">
@@ -185,8 +151,7 @@ GET  /project-readme</code></pre>
           <li><strong>Realtime Loop:</strong> Start Realtime Capture + Process. Metrics accumulate. Click again to stop. Controls are locked during realtime.</li>
           <li><strong>Build Grounding:</strong> Drag presets into Script Generator (or Add All Presets), then Apply Presets or Copy Script.</li>
           <li><strong>Run Sweep:</strong> Adjust samples/condition and stats iterations, click Run Sweep. Watch thumbnail grid appear and progress update. Results download via buttons.</li>
-          <li><strong>LLM Benchmark:</strong> Enter model list, set per-condition limit, click Run Benchmark (requires Ollama). Browse and download artifacts.</li>
-          <li><strong>Clear:</strong> Clear Data resets logs/stats/dataset/script and experiment/LLM sections while preserving face. Clear Workspace resets face to defaults and core workspace data, while preserving Reproducible Experiments (Run Sweep) and LLM Benchmark Comparison results.</li>
+          <li><strong>Clear Workspace:</strong> Reset face settings and clear symbolic/histogram artifacts while preserving Run Sweep results.</li>
           <li><strong>Validate:</strong> Run <code>python self_test_symbolic.py</code> for reproducible offline checks.</li>
         </ol>
       </section>
