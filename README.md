@@ -1,5 +1,4 @@
 # Visual Time Perception & Symbolic Reasoning
-============================================
 
 ## MSc AI Module 7WCM2018-0509-2025 Assignment - Custom Mini Project by Franz Ayestaran
 
