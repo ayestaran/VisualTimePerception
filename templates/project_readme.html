@@ -13,148 +13,18 @@
       </button>
 
       <header class="hero">
-        <h1>Visual Time Perception &amp; Symbolic Reasoning</h1>
-        <p>
-          An interactive research and learning environment for symbolic clock interpretation.
-        </p>
+        <h1>{{ hero_title }}</h1>
+        {% if hero_subtitle %}
+        <p>{{ hero_subtitle }}</p>
+        {% endif %}
       </header>
 
+      {% for section in readme_sections %}
       <section class="panel">
-        <h2>System Stack</h2>
-        <ul>
-          <li>Backend: Flask API running on <strong>0.0.0.0:5014</strong></li>
-          <li>Vision: OpenCV (cv2) + NumPy for symbolic clock hand extraction</li>
-          <li>Formal reasoning: weighted-model-counting style probabilistic logic inference</li>
-          <li>Frontend: HTML5 Canvas + JavaScript fetch API</li>
-          <li>Persistence: PNG snapshots + flip metadata + symbolic history export</li>
-          <li>Operations: launch.sh for start/stop/restart/status lifecycle</li>
-        </ul>
+        <h2>{{ section.title }}</h2>
+        <article class="readme-content">{{ section.html | safe }}</article>
       </section>
-
-      <section class="panel">
-        <h2>Symbolic Technique</h2>
-        <ol>
-          <li>Capture canvas frame as PNG and save with orientation metadata (`flipped`).</li>
-          <li>Load image in Python and unflip via OpenCV when metadata marks it mirrored.</li>
-          <li>Find clock geometry (center/radius) using HoughCircles with fallback heuristics.</li>
-          <li>Detect hands using HSV color masks connected to the center pivot.</li>
-          <li>Fallback to edge + Hough line candidates when color detection is uncertain.</li>
-          <li>Convert hand angles into symbolic `HOUR_HAND`, `MINUTE_HAND`, `SECOND_HAND`, and `TIME`.</li>
-          <li>Run probabilistic logic inference and emit MAP assignment, marginals, and weighted rule summary.</li>
-          <li>Return orientation fields (`was_mirrored`, `image_orientation`) for traceability.</li>
-        </ol>
-      </section>
-
-      <section class="panel">
-        <h2>Key Endpoints</h2>
-        <pre><code>POST /save-image
-POST /symbolic-clock
-      POST /run-experiments
-      GET  /experiment-artifacts
-      GET  /experiment-summary
-      GET  /experiment-artifact/&lt;artifact_name&gt;
-GET  /project-readme</code></pre>
-      </section>
-
-      <section class="panel">
-        <h2>Design Notes</h2>
-        <p>
-          The interface supports dark/light themes, realtime symbolic processing, probabilistic symbolic reasoning,
-          reproducible experiment sweeps, exportable artifacts, and a dedicated
-          documentation surface in this separate tab.
-        </p>
-      </section>
-
-      <section class="panel">
-        <h2>User Interface Sections</h2>
-
-        <h3>Clock Canvas &amp; Live Processing Histogram (Top Section)</h3>
-        <p><strong>Purpose:</strong> Visualize clock rendering and real-time symbolic inference metrics.</p>
-        <ul>
-          <li><strong>Left side (Canvas):</strong> Interactive clock display with selected theme and perturbations.
-            <ul>
-              <li>Theme selector dropdown to choose era styles (Roman numerals, modern, etc.)</li>
-              <li>Toggles allow randomizing theme, rotating, flipping, and adding distractor artifacts.</li>
-              <li>Flip button manually mirrors the clock; useful for testing flip tolerance.</li>
-              <li>Reset Clock Face returns to Plain Classic baseline.</li>
-            </ul>
-          </li>
-          <li><strong>Right side (Histogram):</strong> Shows three diagnostic plots:
-            <ul>
-              <li><strong>Angle bins (0-360°):</strong> Histogram of detected hand angle candidates. Tall spikes = good consensus; low/flat = ambiguous detection.</li>
-              <li><strong>Mask strength bars (avg):</strong> Average HSV mask pixel count for each hand (hour, minute, second). Taller bars = stronger color detection.</li>
-              <li><strong>Perception error trend:</strong> Running average of hour/minute/second errors. Drooping trend = improving accuracy over frames; flat trend = inconsistent detection.</li>
-              <li>Updates every symbolic conversion during realtime capture.</li>
-            </ul>
-          </li>
-        </ul>
-
-        <h3>Symbolic Output &amp; Telemetry (Center Panels)</h3>
-        <p><strong>Purpose:</strong> Inspect per-frame symbolic results and debug metrics.</p>
-        <ul>
-          <li><strong>Symbolic Output:</strong> JSON object with HOUR_HAND, MINUTE_HAND, SECOND_HAND, and TIME string.</li>
-          <li><strong>Probabilistic Logic Reasoning:</strong> Formal weighted model-counting inference (MAP assignment, marginals, rule satisfaction mass).</li>
-          <li><strong>Symbolic Output Log:</strong> Rolling JSON log of all captured frames. Export with button for external analysis.</li>
-        </ul>
-
-        <h3>Grounding Preset Studio (Collapsible Section)</h3>
-        <p><strong>Purpose:</strong> Compose reusable symbolic grounding strategies via drag-and-drop.</p>
-        <ul>
-          <li><strong>Preset Library (left column):</strong> Available grounding rules (e.g., "hour &gt; minute", "fallback detection").</li>
-          <li><strong>Script Generator (right column):</strong> Drag presets from library to build a sequence.
-            <ul>
-              <li><strong>Add All Presets:</strong> Inserts all available rules in one action.</li>
-              <li><strong>Apply Presets:</strong> Executes the script sequence on the current clock state (modifies symbolic output).</li>
-              <li><strong>Copy Script:</strong> Exports generated script as JSON to clipboard.</li>
-              <li><strong>Clear Script:</strong> Erases the current sequence.</li>
-            </ul>
-          </li>
-          <li><strong>Generated Script JSON:</strong> Formatted output showing composed rule chain.</li>
-          <li>Scripts persist across page refresh and are cleared only by "Clear Workspace".</li>
-        </ul>
-
-        <h3>Reproducible Experiments - Run Sweep (Collapsible Section)</h3>
-        <p><strong>Purpose:</strong> Execute a full robustness benchmark with 10 degradation conditions and statistical analysis.</p>
-        <ul>
-          <li><strong>Parameters:</strong>
-            <ul>
-              <li><strong>Samples/condition:</strong> Number of synthetic clock images per condition (1-500; default 40).</li>
-              <li><strong>Stats iterations:</strong> Bootstrap/permutation iterations for significance testing (100-50,000; default 2,000).</li>
-            </ul>
-          </li>
-          <li><strong>Run Sweep Button:</strong> Launches background sweep thread on the server. Progress bar updates every 1.2s.
-            <ul>
-              <li><strong>Queued → Sampling → Stats → Completed</strong> stage display.</li>
-              <li>Condition thumbnails (5 per row) show sample images for each degradation (rotate, blur, noise, occlusion, etc.).</li>
-              <li>Each thumbnail is clickable to expand and view full description and severity.</li>
-            </ul>
-          </li>
-          <li><strong>Progress &amp; Results:</strong>
-            <ul>
-              <li>Stats Summary Preview renders markdown report with two-way ANOVA and Tukey post-hoc tests.</li>
-              <li>Artifacts (CSV + markdown) are downloaded via buttons.</li>
-              <li>If page is refreshed during the sweep, UI will automatically reconnect to in-flight run (showing progress).</li>
-            </ul>
-          </li>
-          <li><strong>Thumbnails Persistence:</strong> Condition sample thumbnails are cached in browser localStorage and persist across refresh. They are cleared by "Clear Sweep Results".</li>
-        </ul>
-
-      </section>
-
-      <section class="panel">
-        <h2>Step-by-Step Workflow</h2>
-        <ol>
-          <li><strong>Open:</strong> Run <code>launch.sh start</code>, then open <code>http://127.0.0.1:5014</code>.</li>
-          <li><strong>Set Baseline:</strong> Pick Theme, optionally Reset Clock Face, keep Artifact-safe mode on for clean tests.</li>
-          <li><strong>Single Frame:</strong> Click Capture Snapshot, then Convert to Symbolic. Review Symbolic Output and Log.</li>
-          <li><strong>Monitor Telemetry:</strong> Watch Angle Histogram, Mask Strength bars, and Perception Error Trend update.</li>
-          <li><strong>Realtime Loop:</strong> Start Realtime Capture + Process. Metrics accumulate. Click again to stop. Controls are locked during realtime.</li>
-          <li><strong>Build Grounding:</strong> Drag presets into Script Generator (or Add All Presets), then Apply Presets or Copy Script.</li>
-          <li><strong>Run Sweep:</strong> Adjust samples/condition and stats iterations, click Run Sweep. Watch thumbnail grid appear and progress update. Results download via buttons.</li>
-          <li><strong>Clear Workspace:</strong> Reset face settings and clear symbolic/histogram artifacts while preserving Run Sweep results.</li>
-          <li><strong>Validate:</strong> Run <code>python self_test_symbolic.py</code> for reproducible offline checks.</li>
-        </ol>
-      </section>
+      {% endfor %}
     </main>
 
     <script src="/static/readme.js"></script>

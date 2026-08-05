@@ -1,8 +1,10 @@
 import base64
 import binascii
+import html
 import io
 import json
 import os
+import re
 import tempfile
 import threading
 import time
@@ -13,7 +15,7 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, render_template, request, send_file
 
 from run_experiments import get_condition_preview_images, run_experiments
 from stats_summary import generate_stats_report
@@ -113,6 +115,213 @@ def _encode_frame_to_base64(frame: np.ndarray) -> str:
     if not success:
         raise RuntimeError("Failed to encode OpenCV frame to PNG")
     return base64.b64encode(encoded_buffer).decode("ascii")
+
+
+def _render_readme_markdown(markdown_text: str) -> str:
+    """Render a limited markdown subset used by README.md without extra dependencies."""
+    lines = markdown_text.splitlines()
+    html_parts = []
+    list_type = None
+    in_code_block = False
+    code_lines = []
+    line_index = 0
+
+    def close_list() -> None:
+        nonlocal list_type
+        if list_type is not None:
+            html_parts.append(f"</{list_type}>")
+            list_type = None
+
+    def render_inline(text: str) -> str:
+        inline_parts = []
+        cursor = 0
+        token_pattern = re.compile(r"`([^`]+)`|\[([^\]]+)\]\(([^)]+)\)")
+
+        for token in token_pattern.finditer(text):
+            if token.start() > cursor:
+                inline_parts.append(html.escape(text[cursor:token.start()]))
+
+            code_text = token.group(1)
+            link_label = token.group(2)
+            link_target = token.group(3)
+
+            if code_text is not None:
+                inline_parts.append(f"<code>{html.escape(code_text)}</code>")
+            else:
+                normalized_target = (link_target or "").strip()
+                if normalized_target and not re.match(r"^(?:[a-z]+:|/|#)", normalized_target, flags=re.IGNORECASE):
+                    markdown_target = normalized_target.split("#", 1)[0]
+                    if markdown_target.lower().endswith(".md"):
+                        normalized_target = f"/docs/{normalized_target}"
+
+                safe_target = html.escape(normalized_target, quote=True)
+                safe_label = html.escape(link_label or "")
+                inline_parts.append(f'<a href="{safe_target}">{safe_label}</a>')
+
+            cursor = token.end()
+
+        if cursor < len(text):
+            inline_parts.append(html.escape(text[cursor:]))
+
+        return "".join(inline_parts)
+
+    while line_index < len(lines):
+        line = lines[line_index]
+        stripped = line.strip()
+
+        if in_code_block:
+            if stripped.startswith("```"):
+                html_parts.append("<pre><code>{}</code></pre>".format(html.escape("\n".join(code_lines))))
+                code_lines = []
+                in_code_block = False
+            else:
+                code_lines.append(line)
+            line_index += 1
+            continue
+
+        if stripped.startswith("```"):
+            close_list()
+            in_code_block = True
+            code_lines = []
+            line_index += 1
+            continue
+
+        if not stripped:
+            close_list()
+            line_index += 1
+            continue
+
+        if len(stripped) >= 3 and set(stripped) <= {"-"}:
+            line_index += 1
+            continue
+
+        if len(stripped) >= 3 and set(stripped) <= {"="}:
+            line_index += 1
+            continue
+
+        if line_index + 1 < len(lines):
+            underline = lines[line_index + 1].strip()
+            if underline and set(underline) <= {"="}:
+                close_list()
+                html_parts.append(f"<h1>{render_inline(stripped)}</h1>")
+                line_index += 2
+                continue
+            if underline and set(underline) <= {"-"}:
+                close_list()
+                html_parts.append(f"<h2>{render_inline(stripped)}</h2>")
+                line_index += 2
+                continue
+
+        heading_match = re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if heading_match:
+            close_list()
+            heading_level = len(heading_match.group(1))
+            heading_text = heading_match.group(2).strip()
+            html_parts.append(f"<h{heading_level}>{render_inline(heading_text)}</h{heading_level}>")
+            line_index += 1
+            continue
+
+        unordered_match = re.match(r"^[-*+]\s+(.*)$", stripped)
+        if unordered_match:
+            if list_type != "ul":
+                close_list()
+                html_parts.append("<ul>")
+                list_type = "ul"
+            html_parts.append(f"<li>{render_inline(unordered_match.group(1).strip())}</li>")
+            line_index += 1
+            continue
+
+        ordered_match = re.match(r"^\d+\.\s+(.*)$", stripped)
+        if ordered_match:
+            if list_type != "ol":
+                close_list()
+                html_parts.append("<ol>")
+                list_type = "ol"
+            html_parts.append(f"<li>{render_inline(ordered_match.group(1).strip())}</li>")
+            line_index += 1
+            continue
+
+        close_list()
+        paragraph_lines = [stripped]
+        line_index += 1
+        while line_index < len(lines):
+            candidate = lines[line_index].strip()
+            if not candidate:
+                break
+            if candidate.startswith("```"):
+                break
+            if re.match(r"^(#{1,6})\s+", candidate):
+                break
+            if re.match(r"^[-*+]\s+", candidate):
+                break
+            if re.match(r"^\d+\.\s+", candidate):
+                break
+            if line_index + 1 < len(lines):
+                next_candidate = lines[line_index + 1].strip()
+                if next_candidate and set(next_candidate) <= {"="}:
+                    break
+                if next_candidate and set(next_candidate) <= {"-"}:
+                    break
+            paragraph_lines.append(candidate)
+            line_index += 1
+
+        html_parts.append(f"<p>{render_inline(' '.join(paragraph_lines))}</p>")
+
+    close_list()
+    if in_code_block:
+        html_parts.append("<pre><code>{}</code></pre>".format(html.escape("\n".join(code_lines))))
+
+    return "\n".join(html_parts)
+
+
+def _extract_readme_title(readme_text: str) -> str:
+    for raw_line in readme_text.splitlines():
+        stripped = raw_line.strip()
+        match = re.match(r"^#\s+(.*)$", stripped)
+        if match:
+            return match.group(1).strip()
+        if stripped and not set(stripped) <= {"="}:
+            return stripped
+    return "Project README"
+
+
+def _build_readme_sections(readme_text: str) -> tuple[str, str, list[dict[str, str]]]:
+    title = _extract_readme_title(readme_text)
+    lines = readme_text.splitlines()
+
+    sections = []
+    current_title = None
+    current_lines = []
+    subtitle = ""
+
+    def flush_section() -> None:
+        nonlocal current_title, current_lines
+        if not current_title:
+            return
+        section_body = "\n".join(current_lines).strip()
+        section_html = _render_readme_markdown(section_body)
+        sections.append({"title": current_title, "html": section_html})
+        current_lines = []
+
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        heading_match = re.match(r"^##\s+(.*)$", stripped)
+        if heading_match:
+            if current_title is not None:
+                flush_section()
+
+            current_title = heading_match.group(1).strip()
+            continue
+
+        if current_title is not None:
+            current_lines.append(raw_line)
+
+    flush_section()
+
+    if not sections:
+        sections = [{"title": "README", "html": _render_readme_markdown(readme_text)}]
+
+    return title, subtitle, sections
 
 
 def _build_stage_entry(frame: np.ndarray, encode_frame=None, include_dense_data: bool = True) -> dict:
@@ -551,7 +760,55 @@ def project_readme():
         readme_text = README_FILE.read_text(encoding="utf-8")
     except OSError:
         readme_text = "README.md could not be loaded."
-    return render_template("project_readme.html", readme_text=readme_text)
+
+    hero_title, hero_subtitle, readme_sections = _build_readme_sections(readme_text)
+
+    return render_template(
+        "project_readme.html",
+        hero_title=hero_title,
+        hero_subtitle=hero_subtitle,
+        readme_sections=readme_sections,
+    )
+
+
+@app.route("/docs/<path:doc_name>", methods=["GET"])
+def readme_document(doc_name: str):
+    if not doc_name.lower().endswith(".md"):
+        abort(404)
+
+    candidate = (BASE_DIR / doc_name).resolve()
+    try:
+        candidate.relative_to(BASE_DIR)
+    except ValueError:
+        abort(404)
+
+    if not candidate.exists() or not candidate.is_file():
+        abort(404)
+
+    try:
+        doc_text = candidate.read_text(encoding="utf-8")
+    except OSError:
+        abort(404)
+
+    doc_title = _extract_readme_title(doc_text)
+    _, _, doc_sections = _build_readme_sections(doc_text)
+
+    return render_template(
+        "project_readme.html",
+        hero_title=doc_title,
+        hero_subtitle="",
+        readme_sections=doc_sections,
+    )
+
+
+@app.route("/CUSTON-MINI-PROJECT.md", methods=["GET"])
+def custon_mini_project_document():
+    return readme_document("CUSTON-MINI-PROJECT.md")
+
+
+@app.route("/ASSESSMENT-COMPONENTS..md", methods=["GET"])
+def assessment_components_document():
+    return readme_document("ASSESSMENT-COMPONENTS..md")
 
 
 @app.route(PROCESSED_IMAGE_ARTIFACT_URL, methods=["GET"])

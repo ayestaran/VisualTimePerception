@@ -125,6 +125,66 @@ pre {
   overflow-x: auto;
 }
 
+.readme-raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 0.95rem;
+}
+
+.readme-content {
+  line-height: 1.55;
+  font-size: 0.98rem;
+}
+
+.readme-content > :first-child {
+  margin-top: 0;
+}
+
+.readme-content > :last-child {
+  margin-bottom: 0;
+}
+
+.readme-content h1,
+.readme-content h2,
+.readme-content h3,
+.readme-content h4 {
+  margin: 1.1rem 0 0.55rem;
+  line-height: 1.25;
+}
+
+.readme-content p {
+  margin: 0.55rem 0;
+}
+
+.readme-content ul,
+.readme-content ol {
+  margin: 0.5rem 0 0.7rem;
+  padding-left: 1.25rem;
+}
+
+.readme-content li {
+  margin: 0.35rem 0;
+}
+
+.readme-content a {
+  color: var(--accent-strong);
+}
+
+.readme-content pre {
+  margin: 0.8rem 0;
+}
+
+.readme-content code {
+  font-family: "Courier New", monospace;
+}
+
+.readme-content hr {
+  border: 0;
+  border-top: 1px solid var(--panel-border);
+  margin: 0.9rem 0;
+}
+
 code {
   font-family: "Courier New", monospace;
 }
