@@ -59,9 +59,6 @@ const configuredRealtimeMaxSecondsRaw = Number.parseInt(runtimeConfig.realtimeCa
 const REALTIME_MAX_SECONDS = Number.isFinite(configuredRealtimeMaxSecondsRaw) && configuredRealtimeMaxSecondsRaw > 0
   ? configuredRealtimeMaxSecondsRaw
   : null;
-const passwordPromptRequirements = runtimeConfig && typeof runtimeConfig.passwordPromptRequirements === "object"
-  ? runtimeConfig.passwordPromptRequirements
-  : {};
 
 let isFlipped = false;
 let lastCaptureAt = null;
@@ -223,17 +220,6 @@ function getRealtimeLimitLabel() {
   }
 
   return `Realtime max session: ${REALTIME_MAX_SECONDS}s`;
-}
-
-function isPasswordPromptRequired(promptKey) {
-  return false;
-}
-
-function isPasswordPromptRequiredWithFallback(primaryKey, fallbackKey) {
-  if (Object.prototype.hasOwnProperty.call(passwordPromptRequirements, primaryKey)) {
-    return passwordPromptRequirements[primaryKey] !== false;
-  }
-  return isPasswordPromptRequired(fallbackKey);
 }
 
 function updateRealtimeLimitInfo() {
@@ -1720,74 +1706,6 @@ async function refreshExperimentsSummary() {
   }
 }
 
-// Password verification helper
-async function promisePassword(actionName) {
-  return new Promise((resolve) => {
-    const modal = document.getElementById("passwordModal");
-    const title = document.getElementById("passwordModalTitle");
-    const input = document.getElementById("passwordInput");
-    const submitBtn = document.getElementById("passwordModalSubmit");
-    const cancelBtn = document.getElementById("passwordModalCancel");
-
-    if (!modal || !title || !input || !submitBtn || !cancelBtn) {
-      resolve(null);
-      return;
-    }
-
-    title.textContent = `Enter password to ${actionName}`;
-    input.value = "";
-    modal.style.display = "flex";
-    input.focus();
-
-    const handleSubmit = () => {
-      const password = input.value;
-      cleanup();
-      resolve(password);
-    };
-
-    const handleCancel = () => {
-      cleanup();
-      resolve(null);
-    };
-
-    const handleKeyPress = (e) => {
-      if (e.key === "Enter") {
-        handleSubmit();
-      } else if (e.key === "Escape") {
-        handleCancel();
-      }
-    };
-
-    const cleanup = () => {
-      modal.style.display = "none";
-      submitBtn.removeEventListener("click", handleSubmit);
-      cancelBtn.removeEventListener("click", handleCancel);
-      input.removeEventListener("keypress", handleKeyPress);
-    };
-
-    submitBtn.addEventListener("click", handleSubmit);
-    cancelBtn.addEventListener("click", handleCancel);
-    input.addEventListener("keypress", handleKeyPress);
-  });
-}
-
-async function verifyPassword(password) {
-  try {
-    const response = await fetch("/verify-password", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ password }),
-    });
-    const data = await response.json();
-    return data.valid === true;
-  } catch (err) {
-    console.error("Password verification error:", err);
-    return false;
-  }
-}
-
 async function runExperimentSweepFromUI() {
   const samplesPerCondition = Number.parseInt(expSamplesInput ? expSamplesInput.value : "40", 10);
   const statsIterations = Number.parseInt(expStatsIterationsInput ? expStatsIterationsInput.value : "2000", 10);
@@ -1800,20 +1718,6 @@ async function runExperimentSweepFromUI() {
   if (!Number.isFinite(statsIterations) || statsIterations < 100 || statsIterations > 50000) {
     updateExperimentsStatus("Stats iterations must be between 100 and 50000.");
     return;
-  }
-
-  if (isPasswordPromptRequired("run_experiments")) {
-    const password = await promisePassword("run experiments");
-    if (!password) {
-      updateExperimentsStatus("Experiment run cancelled.");
-      return;
-    }
-
-    const isValid = await verifyPassword(password);
-    if (!isValid) {
-      updateExperimentsStatus("Invalid password. Experiment run cancelled.");
-      return;
-    }
   }
 
   setExperimentsBusyState(true);
@@ -3666,26 +3570,6 @@ if (realtimeBtn) {
       return;
     }
 
-    if (isPasswordPromptRequired("start_realtime_capture")) {
-      const password = await promisePassword("start realtime capture + process");
-      if (!password) {
-        if (symbolicOutput) {
-          symbolicOutput.value = "Realtime capture cancelled.";
-          resizeSymbolicOutput();
-        }
-        return;
-      }
-
-      const isValid = await verifyPassword(password);
-      if (!isValid) {
-        if (symbolicOutput) {
-          symbolicOutput.value = "Invalid password. Realtime capture cancelled.";
-          resizeSymbolicOutput();
-        }
-        return;
-      }
-    }
-
     startRealtimeMode();
   });
 }
@@ -3717,20 +3601,6 @@ if (themeToggleBtn) {
 
 if (clearDataBtn) {
   clearDataBtn.addEventListener("click", async () => {
-    if (isPasswordPromptRequired("clear_data")) {
-      const password = await promisePassword("clear all data");
-      if (!password) {
-        updateExperimentsStatus("Clear data cancelled.");
-        return;
-      }
-
-      const isValid = await verifyPassword(password);
-      if (!isValid) {
-        updateExperimentsStatus("Invalid password. Clear data cancelled.");
-        return;
-      }
-    }
-
     const confirmed = window.confirm(
       "Clear all data and workspace state? This will erase symbolic output, logs, histogram stats, grounding script presets, Processed Image, OpenCV Processing Stages, and reset the clock face."
     );
@@ -3747,20 +3617,6 @@ if (clearDataBtn) {
 
 if (clearWorkspaceBtn) {
   clearWorkspaceBtn.addEventListener("click", async () => {
-    if (isPasswordPromptRequired("clear_workspace")) {
-      const password = await promisePassword("clear workspace");
-      if (!password) {
-        updateExperimentsStatus("Clear workspace cancelled.");
-        return;
-      }
-
-      const isValid = await verifyPassword(password);
-      if (!isValid) {
-        updateExperimentsStatus("Invalid password. Clear workspace cancelled.");
-        return;
-      }
-    }
-
     const confirmed = window.confirm(
       "Clear workspace data? This resets the clock face to defaults and clears symbolic output, log history, processing histogram data, Processed Image, and OpenCV Processing Stages. Reproducible Experiments (Run Sweep) and LLM Benchmark Comparison results are preserved."
     );
@@ -3786,20 +3642,6 @@ if (runExperimentsBtn) {
 
 if (clearExperimentsBtn) {
   clearExperimentsBtn.addEventListener("click", async () => {
-    if (isPasswordPromptRequiredWithFallback("clear_experiments", "run_experiments")) {
-      const password = await promisePassword("clear sweep results");
-      if (!password) {
-        updateExperimentsStatus("Sweep clear cancelled.");
-        return;
-      }
-
-      const isValid = await verifyPassword(password);
-      if (!isValid) {
-        updateExperimentsStatus("Invalid password. Sweep clear cancelled.");
-        return;
-      }
-    }
-
     const confirmed = window.confirm(
       "Clear the current sweep summary, progress, thumbnails, and generated experiment artifacts?"
     );

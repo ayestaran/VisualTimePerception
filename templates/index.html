@@ -195,24 +195,6 @@
       </section>
     </main>
 
-    <!-- Password Dialog Modal -->
-    <div id="passwordModal" class="password-modal" style="display: none;">
-      <div class="password-modal-content">
-        <h2 id="passwordModalTitle">Enter Password</h2>
-        <input
-          id="passwordInput"
-          type="password"
-          placeholder="Enter password"
-          aria-label="Password input"
-          autocomplete="off"
-        />
-        <div class="password-modal-buttons">
-          <button id="passwordModalSubmit" type="button">Submit</button>
-          <button id="passwordModalCancel" type="button">Cancel</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Lightbox for sweep condition thumbnails -->
     <div id="sweepLightbox" class="sweep-lightbox" hidden role="dialog" aria-modal="true" aria-label="Condition image expanded view">
       <button class="sweep-lightbox-close" id="sweepLightboxClose" type="button" aria-label="Close">&times;</button>
@@ -226,7 +208,6 @@
       id="runtimeConfig"
       hidden
       data-realtime-capture-max-seconds='{{ runtime_config.realtime_capture_max_seconds | tojson | forceescape }}'
-      data-password-prompt-requirements='{{ runtime_config.password_prompt_requirements | tojson | forceescape }}'
     ></div>
     <script>
       const runtimeConfigElement = document.getElementById("runtimeConfig");
@@ -234,9 +215,6 @@
         realtimeCaptureMaxSeconds: runtimeConfigElement
           ? JSON.parse(runtimeConfigElement.dataset.realtimeCaptureMaxSeconds || "null")
           : null,
-        passwordPromptRequirements: runtimeConfigElement
-          ? JSON.parse(runtimeConfigElement.dataset.passwordPromptRequirements || "{}")
-          : {}
       };
     </script>
     <script src="/static/app.js"></script>

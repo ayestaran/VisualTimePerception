@@ -244,20 +244,28 @@ Failure response (422) includes:
 
 ## Local Run
 
+For a fresh setup on a new machine, use:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+chmod +x prerequisites.sh
+./prerequisites.sh
 ./launch.sh start
 ```
 
 Open:
 - http://127.0.0.1:5014
 
-Stop:
+To stop the app:
 
 ```bash
 ./launch.sh stop
+```
+
+If you want to run the app with a fixed realtime cap:
+
+```bash
+./launch.sh restart --realtime-max-seconds 30
+```
 ```
 
 Restart:

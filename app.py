@@ -82,71 +82,6 @@ def _read_positive_int_env(name: str) -> Optional[int]:
 
 REALTIME_CAPTURE_MAX_SECONDS = _read_positive_int_env("REALTIME_CAPTURE_MAX_SECONDS")
 
-DEFAULT_PASSWORD_PROMPT_REQUIREMENTS = {
-    "run_experiments": False,
-    "start_realtime_capture": False,
-    "clear_data": False,
-    "clear_workspace": False,
-    "clear_experiments": False,
-}
-
-# Load passwords from password.json
-PASSWORDS = {}
-PASSWORD_FILE = BASE_DIR / "password.json"
-if PASSWORD_FILE.exists():
-    try:
-        PASSWORDS = json.loads(PASSWORD_FILE.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, IOError):
-        PASSWORDS = {}
-
-
-def _coerce_bool(value, default: bool) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"true", "1", "yes", "on"}:
-            return True
-        if normalized in {"false", "0", "no", "off"}:
-            return False
-    return default
-
-
-def _read_dialog_config() -> dict:
-    dialog_config = {
-        "password_prompts": dict(DEFAULT_PASSWORD_PROMPT_REQUIREMENTS),
-    }
-
-    dialog_file = BASE_DIR / "dialog.json"
-    if not dialog_file.exists():
-        return dialog_config
-
-    try:
-        loaded = json.loads(dialog_file.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, IOError):
-        return dialog_config
-
-    if not isinstance(loaded, dict):
-        return dialog_config
-
-    loaded_prompts = loaded.get("password_prompts", {})
-    if not isinstance(loaded_prompts, dict):
-        return dialog_config
-
-    merged_prompts = {}
-    for prompt_key, default_required in DEFAULT_PASSWORD_PROMPT_REQUIREMENTS.items():
-        merged_prompts[prompt_key] = _coerce_bool(loaded_prompts.get(prompt_key), default_required)
-
-    # Backward-compatible defaults: if clear-specific keys are missing, inherit run-action policy.
-    if "clear_experiments" not in loaded_prompts:
-        merged_prompts["clear_experiments"] = merged_prompts["run_experiments"]
-
-    dialog_config["password_prompts"] = merged_prompts
-    return dialog_config
-
-
-DIALOG_CONFIG = _read_dialog_config()
-
 
 def _ensure_static_dir() -> Path:
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -606,7 +541,6 @@ def index():
         "index.html",
         runtime_config={
             "realtime_capture_max_seconds": REALTIME_CAPTURE_MAX_SECONDS,
-            "password_prompt_requirements": DIALOG_CONFIG["password_prompts"],
         },
     )
 
@@ -736,18 +670,6 @@ def vision_clock():
         return jsonify(response_payload)
     except Exception as exc:
         return _processing_error_response(exc, allow_value_error=True)
-
-
-@app.route("/verify-password", methods=["POST", "OPTIONS"])
-def verify_password():
-    if request.method == "OPTIONS":
-        return ("", 204)
-
-    payload = request.get_json(silent=True) or {}
-    password = str(payload.get("password", "")).strip()
-
-    # Password checks have been disabled for this app.
-    return jsonify({"valid": True, "error": None})
 
 
 @app.route("/run-experiments", methods=["POST", "OPTIONS"])
