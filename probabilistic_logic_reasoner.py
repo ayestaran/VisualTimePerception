@@ -7,33 +7,33 @@ Assignment = Dict[str, int]
 
 
 # Process: Circular Distance Calculation
-# Title: Compute shortest wrapped distance on a circular scale.
+# Purpose: Compute shortest wrapped distance on a circular scale.
 def circular_delta(value_a: float, value_b: float, period: float) -> float:
     raw = abs((value_a % period) - (value_b % period))
     return min(raw, period - raw)
 
 
 # Process: Minute Hand Geometry
-# Title: Convert minute value to angle in degrees.
+# Purpose: Convert minute value to angle in degrees.
 def angle_for_minute(minute: int) -> float:
     return (minute % 60) * 6.0
 
 
 # Process: Second Hand Geometry
-# Title: Convert second value to angle in degrees.
+# Purpose: Convert second value to angle in degrees.
 def angle_for_second(second: int) -> float:
     return (second % 60) * 6.0
 
 
 # Process: Hour Hand Geometry
-# Title: Convert hour and minute to a continuous hour-hand angle.
+# Purpose: Convert hour and minute to a continuous hour-hand angle.
 def angle_for_hour(hour: int, minute: int) -> float:
     hour_12 = hour % 12
     return ((hour_12 + (minute % 60) / 60.0) * 30.0) % 360.0
 
 
 # Process: Time Serialization
-# Title: Format a canonical HH:MM:SS string.
+# Purpose: Format a canonical HH:MM:SS string.
 def time_string(hour: int, minute: int, second: int) -> str:
     return f"{hour:02d}:{minute:02d}:{second:02d}"
 
@@ -41,7 +41,7 @@ def time_string(hour: int, minute: int, second: int) -> str:
 @dataclass(frozen=True)
 class WeightedClause:
     # Process: Weighted Rule Specification
-    # Title: Represent a logical clause with score weight and hardness.
+    # Purpose: Represent a logical clause with score weight and hardness.
     name: str
     weight: float
     predicate: Callable[[Assignment], bool]
@@ -64,7 +64,7 @@ class ProbabilisticLogicClockReasoner:
         candidate_angles_deg: Sequence[float],
     ):
         # Process: Observation and Candidate Initialization
-        # Title: Persist observed hand angles and normalize candidate inputs.
+        # Purpose: Persist observed hand angles and normalize candidate inputs.
         self.observed_hour_angle = observed_hour_angle
         self.observed_minute_angle = observed_minute_angle
         self.observed_second_angle = observed_second_angle
@@ -72,7 +72,7 @@ class ProbabilisticLogicClockReasoner:
 
     @staticmethod
     # Process: Candidate Angle Quantization
-    # Title: Convert candidate angles into nearest minute ticks.
+    # Purpose: Convert candidate angles into nearest minute ticks.
     def _minutes_from_angles(angles: Iterable[float]) -> List[int]:
         out = set()
         for angle in angles:
@@ -81,7 +81,7 @@ class ProbabilisticLogicClockReasoner:
 
     @staticmethod
     # Process: Hour Candidate Extraction
-    # Title: Derive plausible neighboring hours from an hour-hand angle.
+    # Purpose: Derive plausible neighboring hours from an hour-hand angle.
     def _hours_from_angle(angle: float) -> List[int]:
         raw_hour = ((angle % 360.0) / 30.0) % 12.0
         nearest = int(round(raw_hour)) % 12
@@ -94,25 +94,25 @@ class ProbabilisticLogicClockReasoner:
         return sorted(candidates)
 
     # Process: Domain Construction
-    # Title: Build constrained value domains for hour, minute, and second.
+    # Purpose: Build constrained value domains for hour, minute, and second.
     def _build_domains(self) -> Dict[str, List[int]]:
         minute_domain: set[int] = set()
         second_domain: set[int] = set()
 
         # Process: Minute Domain Expansion
-        # Title: Expand around candidate minute values for tolerance.
+        # Purpose: Expand around candidate minute values for tolerance.
         candidate_minutes = self._minutes_from_angles(self.candidate_angles_deg)
         for minute in candidate_minutes:
             minute_domain.update({minute, (minute - 1) % 60, (minute + 1) % 60})
 
         # Process: Minute Observation Anchoring
-        # Title: Anchor minute domain around observed minute angle when available.
+        # Purpose: Anchor minute domain around observed minute angle when available.
         if self.observed_minute_angle is not None:
             obs_m = int(round((self.observed_minute_angle % 360.0) / 6.0)) % 60
             minute_domain.update({obs_m, (obs_m - 1) % 60, (obs_m + 1) % 60, (obs_m + 2) % 60, (obs_m - 2) % 60})
 
         # Process: Second Domain Selection
-        # Title: Build second candidates from observation or default to zero.
+        # Purpose: Build second candidates from observation or default to zero.
         if self.observed_second_angle is not None:
             obs_s = int(round((self.observed_second_angle % 360.0) / 6.0)) % 60
             second_domain.update({obs_s, (obs_s - 1) % 60, (obs_s + 1) % 60, (obs_s + 2) % 60, (obs_s - 2) % 60})
@@ -120,13 +120,13 @@ class ProbabilisticLogicClockReasoner:
             second_domain.add(0)
 
         # Process: Hour Domain Selection
-        # Title: Restrict hour candidates when an hour observation exists.
+        # Purpose: Restrict hour candidates when an hour observation exists.
         hour_domain: set[int] = set(range(1, 13))
         if self.observed_hour_angle is not None:
             hour_domain = set(self._hours_from_angle(self.observed_hour_angle))
 
         # Process: Domain Fallback
-        # Title: Provide a coarse minute grid when no minute candidates exist.
+        # Purpose: Provide a coarse minute grid when no minute candidates exist.
         if not minute_domain:
             minute_domain = set(range(0, 60, 5))
 
@@ -137,7 +137,7 @@ class ProbabilisticLogicClockReasoner:
         }
 
     # Process: Rule Construction
-    # Title: Define weighted logical constraints over candidate assignments.
+    # Purpose: Define weighted logical constraints over candidate assignments.
     def _build_clauses(self, candidate_minutes: Sequence[int], candidate_hours: Sequence[int]) -> List[WeightedClause]:
         candidate_minutes_set = set(candidate_minutes)
         candidate_hours_set = set(candidate_hours)
@@ -176,7 +176,7 @@ class ProbabilisticLogicClockReasoner:
         return clauses
 
     # Process: Measurement Likelihood
-    # Title: Score an assignment using Gaussian-like angle residual penalties.
+    # Purpose: Score an assignment using Gaussian-like angle residual penalties.
     def _measurement_log_score(self, assignment: Assignment) -> float:
         score = 0.0
 
@@ -198,10 +198,10 @@ class ProbabilisticLogicClockReasoner:
         return score
 
     # Process: Probabilistic Inference
-    # Title: Enumerate worlds, weight them, and compute posterior outputs.
+    # Purpose: Enumerate worlds, weight them, and compute posterior outputs.
     def infer(self) -> Dict[str, object]:
         # Process: Setup
-        # Title: Build domains, candidates, and weighted rules.
+        # Purpose: Build domains, candidates, and weighted rules.
         domains = self._build_domains()
         candidate_minutes = self._minutes_from_angles(self.candidate_angles_deg)
         candidate_hours = self._hours_from_angle(self.observed_hour_angle) if self.observed_hour_angle is not None else list(range(1, 13))
@@ -210,7 +210,7 @@ class ProbabilisticLogicClockReasoner:
         worlds: List[Tuple[Assignment, float, List[Tuple[str, bool]]]] = []
 
         # Process: World Enumeration
-        # Title: Evaluate every assignment and accumulate log-weights.
+        # Purpose: Evaluate every assignment and accumulate log-weights.
         for hour in domains["hour"]:
             for minute in domains["minute"]:
                 for second in domains["second"]:
@@ -233,7 +233,7 @@ class ProbabilisticLogicClockReasoner:
                         worlds.append((assignment, log_weight, clause_outcomes))
 
         # Process: Empty-World Fallback
-        # Title: Return a deterministic fallback when all worlds are invalid.
+        # Purpose: Return a deterministic fallback when all worlds are invalid.
         if not worlds:
             fallback_assignment = {"hour": 12, "minute": 0, "second": 0}
             return {
@@ -254,7 +254,7 @@ class ProbabilisticLogicClockReasoner:
             }
 
         # Process: Numerical Stabilization
-        # Title: Convert log-weights to safe linear weights via max-shift.
+        # Purpose: Convert log-weights to safe linear weights via max-shift.
         max_log_weight = max(w[1] for w in worlds)
         weighted_worlds: List[Tuple[Assignment, float, List[Tuple[str, bool]]]] = []
         total_weight = 0.0
@@ -264,17 +264,17 @@ class ProbabilisticLogicClockReasoner:
             total_weight += weight
 
         # Process: Posterior Normalization
-        # Title: Normalize world weights into a probability distribution.
+        # Purpose: Normalize world weights into a probability distribution.
         posterior_worlds: List[Tuple[Assignment, float, List[Tuple[str, bool]]]] = []
         for assignment, weight, outcomes in weighted_worlds:
             posterior_worlds.append((assignment, weight / total_weight, outcomes))
 
         # Process: MAP Selection
-        # Title: Pick the highest-probability assignment.
+        # Purpose: Pick the highest-probability assignment.
         map_assignment, map_prob, _ = max(posterior_worlds, key=lambda x: x[1])
 
         # Process: Marginal Aggregation
-        # Title: Compute per-variable posterior marginals from world probabilities.
+        # Purpose: Compute per-variable posterior marginals from world probabilities.
         marginals: Dict[str, Dict[int, float]] = {
             "hour": {},
             "minute": {},
@@ -286,13 +286,13 @@ class ProbabilisticLogicClockReasoner:
                 marginals[var][value] = marginals[var].get(value, 0.0) + prob
 
         # Process: Marginal Formatting
-        # Title: Keep only top-k values for concise output.
+        # Purpose: Keep only top-k values for concise output.
         def top_marginals(var: str, top_k: int = 5) -> List[Dict[str, float]]:
             items = sorted(marginals[var].items(), key=lambda kv: kv[1], reverse=True)[:top_k]
             return [{"value": int(v), "probability": round(float(p), 6)} for v, p in items]
 
         # Process: Rule Diagnostics
-        # Title: Summarize posterior mass satisfying each weighted clause.
+        # Purpose: Summarize posterior mass satisfying each weighted clause.
         rule_summary: List[Dict[str, object]] = []
         for clause in clauses:
             satisfied_mass = 0.0
@@ -311,7 +311,7 @@ class ProbabilisticLogicClockReasoner:
             )
 
         # Process: Result Packaging
-        # Title: Return MAP estimate, marginals, and rule diagnostics.
+        # Purpose: Return MAP estimate, marginals, and rule diagnostics.
         return {
             "method": "weighted-model-counting-enumeration",
             "world_count": len(worlds),
