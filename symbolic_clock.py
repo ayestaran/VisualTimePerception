@@ -36,6 +36,8 @@ SECOND_HAND_COLOR_RANGES: Tuple[ColorRange, ...] = (
 )
 
 
+# Process Title: Symbolic Detection Error Model
+# Purpose: Carry a user-facing detection error plus structured debug metrics.
 class SymbolicDetectionError(RuntimeError):
     def __init__(self, message: str, debug_metrics: Optional[Dict[str, Union[int, bool, str, List[float]]]] = None):
         super().__init__(message)
@@ -43,6 +45,8 @@ class SymbolicDetectionError(RuntimeError):
 
 
 def _clock_angle_from_tip(center: Tuple[int, int], tip: Tuple[int, int]) -> float:
+    # Process Title: Convert Tip Vector To Clock Angle
+    # Purpose: Map a tip point into clockwise degrees where 12 o'clock is 0°.
     dx = tip[0] - center[0]
     dy = center[1] - tip[1]
     angle = math.degrees(math.atan2(dx, dy)) % 360.0
@@ -54,6 +58,8 @@ def _endpoint_farthest_from_center(
     p1: Tuple[int, int],
     p2: Tuple[int, int],
 ) -> Tuple[int, int]:
+    # Process Title: Choose Hand Tip Endpoint
+    # Purpose: Select the line endpoint most likely to be the visible hand tip.
     d1 = math.hypot(p1[0] - center[0], p1[1] - center[1])
     d2 = math.hypot(p2[0] - center[0], p2[1] - center[1])
     return p1 if d1 >= d2 else p2
@@ -64,6 +70,8 @@ def _distance_point_to_segment(
     a: Tuple[int, int],
     b: Tuple[int, int],
 ) -> float:
+    # Process Title: Measure Center Alignment
+    # Purpose: Compute point-to-segment distance for center anchoring checks.
     px, py = point
     ax, ay = a
     bx, by = b
@@ -82,6 +90,8 @@ def _distance_point_to_segment(
 
 
 def _detect_clock_circle(gray: np.ndarray) -> Tuple[Tuple[int, int], int]:
+    # Process Title: Detect Clock Dial Circle
+    # Purpose: Use Hough circles to estimate center/radius, with safe geometric fallback.
     h, w = gray.shape[:2]
     circles = cv2.HoughCircles(
         gray,
@@ -108,6 +118,8 @@ def _extract_hand_candidates(
     center: Tuple[int, int],
     radius: int,
 ) -> List[LineCandidate]:
+    # Process Title: Extract Geometric Hand Candidates
+    # Purpose: Detect center-anchored line segments and score likely hand strokes.
     blur = cv2.GaussianBlur(gray, (5, 5), 0)
     edges = cv2.Canny(blur, 50, 150)
 
@@ -182,10 +194,14 @@ def _color_mask_hsv(
     lower: Tuple[int, int, int],
     upper: Tuple[int, int, int],
 ) -> np.ndarray:
+    # Process Title: Build Single-Range HSV Mask
+    # Purpose: Threshold HSV pixels for one configured color range.
     return cv2.inRange(hsv, np.array(lower, dtype=np.uint8), np.array(upper, dtype=np.uint8))
 
 
 def _multi_color_mask_hsv(hsv: np.ndarray, ranges: Tuple[ColorRange, ...]) -> np.ndarray:
+    # Process Title: Merge Multi-Range HSV Masks
+    # Purpose: Combine multiple HSV ranges into one binary mask.
     mask = np.zeros(hsv.shape[:2], dtype=np.uint8)
     for lower, upper in ranges:
         mask = cv2.bitwise_or(mask, _color_mask_hsv(hsv, lower, upper))
@@ -193,6 +209,8 @@ def _multi_color_mask_hsv(hsv: np.ndarray, ranges: Tuple[ColorRange, ...]) -> np
 
 
 def _hex_color_to_hsv(hex_value: str) -> Optional[Tuple[int, int, int]]:
+    # Process Title: Normalize UI Color Hints
+    # Purpose: Parse #RRGGBB input and convert to OpenCV HSV space.
     if not isinstance(hex_value, str):
         return None
     cleaned = hex_value.strip()
@@ -215,6 +233,8 @@ def _ranges_from_hsv_hint(
     sat_pad: int,
     val_pad: int,
 ) -> Tuple[ColorRange, ...]:
+    # Process Title: Build Hint-Centered HSV Ranges
+    # Purpose: Generate hue-tolerant ranges around a hint, including hue wrap-around.
     h, s, v = hsv_hint
     lower_s = max(sat_floor, s - sat_pad)
     upper_s = min(255, s + sat_pad)
@@ -245,6 +265,8 @@ def _color_ranges_with_hint(
     sat_pad: int,
     val_pad: int,
 ) -> Tuple[ColorRange, ...]:
+    # Process Title: Select Effective Color Palette
+    # Purpose: Prefer a concrete hint palette when provided, otherwise keep base ranges.
     hint_hsv = _hex_color_to_hsv(color_hint_hex) if color_hint_hex else None
     if hint_hsv is None:
         return base_ranges
@@ -265,6 +287,8 @@ def _color_ranges_with_hint(
 
 
 def _center_connected_component(mask: np.ndarray, center: Tuple[int, int], probe_radius: int) -> np.ndarray:
+    # Process Title: Isolate Center-Connected Stroke
+    # Purpose: Keep only the connected component that touches the clock pivot area.
     if probe_radius < 3:
         probe_radius = 3
 
@@ -300,6 +324,8 @@ def _angle_from_mask_tip(
     radius: int,
     min_dist_ratio: float,
 ) -> Optional[float]:
+    # Process Title: Estimate Angle From Mask Tip
+    # Purpose: Find farthest valid mask pixels and convert their mean tip to angle.
     ys, xs = np.where(mask > 0)
     if xs.size == 0:
         return None
@@ -330,6 +356,8 @@ def _detect_hands_by_color(
     radius: int,
     hand_color_hints: Optional[Dict[str, str]] = None,
 ) -> Tuple[Optional[float], Optional[float], Dict[str, Union[int, bool]]]:
+    # Process Title: Detect Hour/Minute By Color
+    # Purpose: Build hand masks, isolate pivot-connected strokes, and infer two angles.
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
 
     hints = hand_color_hints or {}
@@ -374,6 +402,8 @@ def _detect_hands_by_color(
 
 
 def _dedupe_by_angle(candidates: List[LineCandidate], min_sep_deg: float = 8.0) -> List[LineCandidate]:
+    # Process Title: De-duplicate Similar Angles
+    # Purpose: Remove near-duplicate line candidates that represent the same stroke.
     deduped: List[LineCandidate] = []
     for cand in sorted(candidates, key=lambda c: (c.get("score", 0.0), c["length"]), reverse=True):
         angle = cand["angle"]
@@ -395,6 +425,8 @@ def _detect_red_second_hand_angle(
     radius: int,
     second_color_hint: Optional[str] = None,
 ) -> Tuple[Optional[float], Dict[str, Union[int, bool]]]:
+    # Process Title: Detect Second Hand By Color
+    # Purpose: Isolate second-hand hue ranges and estimate its tip angle.
     hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
 
     second_ranges = _color_ranges_with_hint(
@@ -428,6 +460,8 @@ def _angles_to_symbolic(
     minute_angle: float,
     second_angle: Optional[float],
 ) -> Dict[str, Union[int, str]]:
+    # Process Title: Convert Angles To Time Symbols
+    # Purpose: Map detected angles into hour/minute/second integers and HH:MM:SS text.
     minute_progress = (minute_angle % 360.0) / 6.0
     minute = int(math.floor(minute_progress)) % 60
 
@@ -455,13 +489,19 @@ def interpret_clock_image(
     was_flipped: bool = False,
     hand_color_hints: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Union[int, str, float]]:
+    # Process Title: End-To-End Clock Interpretation
+    # Purpose: Run circle detection, hand extraction, fallbacks, and symbolic inference.
     image = cv2.imread(str(image_path))
     if image is None:
         raise RuntimeError("Could not load saved PNG for symbolic processing.")
 
     if was_flipped:
+        # Process Title: Restore Source Orientation
+        # Purpose: Undo UI preview mirroring so geometry is interpreted correctly.
         image = cv2.flip(image, 1)
 
+    # Process Title: Primary Detection Pipeline
+    # Purpose: Locate dial and estimate hand angles using color-aware masks.
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     center, radius = _detect_clock_circle(gray)
     hour_angle, minute_angle, color_metrics = _detect_hands_by_color(
@@ -482,6 +522,8 @@ def interpret_clock_image(
     fallback_mode = "none"
 
     def _debug_metrics_payload(fallback_used_flag: bool, fallback_mode_value: str) -> Dict[str, Union[int, bool, str, List[float]]]:
+        # Process Title: Build Debug Telemetry Snapshot
+        # Purpose: Package candidate and mask metrics for diagnostics and error reporting.
         return {
             "pipeline": "color-mask + hough-fallback",
             "fallback_used": fallback_used_flag,
@@ -517,6 +559,8 @@ def interpret_clock_image(
 
     # Fallback when color masks fail in non-canonical snapshots.
     if hour_angle is None or minute_angle is None:
+        # Process Title: Geometric Fallback Resolution
+        # Purpose: Recover missing hour/minute angles from high-confidence line candidates.
         fallback_used = True
         candidates = list(all_candidates)
         if len(candidates) < 2:
@@ -593,6 +637,8 @@ def interpret_clock_image(
 
     symbolic = _angles_to_symbolic(hour_angle, minute_angle, second_angle)
 
+    # Process Title: Probabilistic Cross-Check
+    # Purpose: Run optional probabilistic reasoner and keep symbolic output resilient on failure.
     probabilistic_reasoning: Dict[str, Union[str, float, int, dict, list]]
     try:
         reasoner = ProbabilisticLogicClockReasoner(
@@ -609,6 +655,8 @@ def interpret_clock_image(
         }
 
     symbolic.update(
+        # Process Title: Final Output Assembly
+        # Purpose: Return symbolic time plus geometry, diagnostics, and reasoning metadata.
         {
             "hour_angle": round(hour_angle, 2),
             "minute_angle": round(minute_angle, 2),

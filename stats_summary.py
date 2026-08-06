@@ -10,6 +10,8 @@ from typing import Dict, Iterable, List, Sequence, Tuple
 
 @dataclass
 class ConditionStats:
+    # Process: Aggregate Stats Schema
+    # Title: Store per-condition summary metrics for export and reporting.
     condition_id: str
     family: str
     severity: str
@@ -23,16 +25,22 @@ class ConditionStats:
     mean_second_error: float
 
 
+# Process: Boolean Parsing Utility
+# Title: Normalize common truthy string forms to bool.
 def _to_bool(value: str) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "y"}
 
 
+# Process: Numeric Parsing Utility
+# Title: Convert scalar text to float with NaN for missing values.
 def _to_float(value: str) -> float:
     if value is None or value == "":
         return float("nan")
     return float(value)
 
 
+# Process: Mean with NaN Guard
+# Title: Compute mean after filtering missing numeric values.
 def _safe_mean(values: Sequence[float]) -> float:
     filtered = [v for v in values if not math.isnan(v)]
     if not filtered:
@@ -40,11 +48,15 @@ def _safe_mean(values: Sequence[float]) -> float:
     return sum(filtered) / len(filtered)
 
 
+# Process: Metrics Ingestion
+# Title: Load row-wise experiment metrics from CSV.
 def read_metrics_rows(metrics_csv: Path) -> List[Dict[str, str]]:
     with metrics_csv.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
 
 
+# Process: Condition-Level Aggregation
+# Title: Group rows by condition and compute summary rates/errors.
 def compute_condition_stats(rows: Iterable[Dict[str, str]]) -> List[ConditionStats]:
     grouped: Dict[str, List[Dict[str, str]]] = defaultdict(list)
     for row in rows:
@@ -84,6 +96,8 @@ def compute_condition_stats(rows: Iterable[Dict[str, str]]) -> List[ConditionSta
     return stats
 
 
+# Process: Metric Extraction
+# Title: Pull one metric vector for a specific condition ID.
 def _extract_metric(rows: Sequence[Dict[str, str]], condition_id: str, key: str) -> List[float]:
     values: List[float] = []
     for row in rows:
@@ -96,6 +110,8 @@ def _extract_metric(rows: Sequence[Dict[str, str]], condition_id: str, key: str)
     return [v for v in values if not math.isnan(v)]
 
 
+# Process: Permutation Significance Test
+# Title: Estimate p-value for absolute mean difference between two samples.
 def permutation_test_mean_diff(
     a: Sequence[float], b: Sequence[float], iterations: int, rng: random.Random
 ) -> float:
@@ -118,6 +134,8 @@ def permutation_test_mean_diff(
     return (count + 1) / (iterations + 1)
 
 
+# Process: Bootstrap Confidence Interval
+# Title: Estimate 95% CI for mean delta via resampling.
 def bootstrap_delta_ci(
     a: Sequence[float], b: Sequence[float], iterations: int, rng: random.Random
 ) -> Tuple[float, float]:
@@ -136,6 +154,8 @@ def bootstrap_delta_ci(
     return deltas[lo_idx], deltas[hi_idx]
 
 
+# Process: CSV Summary Export
+# Title: Write per-condition aggregate statistics to CSV.
 def write_condition_stats_csv(stats: Sequence[ConditionStats], output_csv: Path) -> None:
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", encoding="utf-8", newline="") as handle:
@@ -173,6 +193,8 @@ def write_condition_stats_csv(stats: Sequence[ConditionStats], output_csv: Path)
             )
 
 
+# Process: Markdown Report Generation
+# Title: Build overview and baseline-comparison statistical report.
 def generate_stats_report(
     metrics_csv: Path,
     output_md: Path,
@@ -181,15 +203,21 @@ def generate_stats_report(
     iterations: int,
     seed: int,
 ) -> None:
+    # Process: Data Preparation
+    # Title: Read metrics, compute aggregates, and persist CSV summary.
     rows = read_metrics_rows(metrics_csv)
     stats = compute_condition_stats(rows)
     write_condition_stats_csv(stats, output_csv)
 
+    # Process: Report Setup
+    # Title: Initialize RNG, output folder, and baseline metric vector.
     rng = random.Random(seed)
     output_md.parent.mkdir(parents=True, exist_ok=True)
 
     baseline_within = _extract_metric(rows, baseline_condition, "within_tolerance")
 
+    # Process: Markdown Assembly
+    # Title: Compose section headers and condition overview table.
     lines: List[str] = []
     lines.append("# Statistical Summary")
     lines.append("")
@@ -209,6 +237,8 @@ def generate_stats_report(
             f"{item.mean_hour_error:.3f} | {item.mean_minute_error:.3f} | {item.mean_second_error:.3f} |"
         )
 
+    # Process: Baseline Pairwise Analysis
+    # Title: Compare within-tolerance rates against baseline with CI and p-value.
     lines.append("")
     lines.append("## Baseline vs Condition (within_tolerance)")
     lines.append("")
@@ -232,9 +262,13 @@ def generate_stats_report(
             f"| {item.condition_id} | {delta:.4f} | [{ci_low:.4f}, {ci_high:.4f}] | {p_value:.4f} |"
         )
 
+    # Process: Report Persist
+    # Title: Write completed markdown report to disk.
     output_md.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# Process: CLI Entrypoint
+# Title: Parse arguments and execute stats report generation.
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate stats summary from metrics_by_condition.csv")
     parser.add_argument("--metrics-csv", type=Path, required=True, help="Path to metrics_by_condition.csv")

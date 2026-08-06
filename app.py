@@ -21,6 +21,8 @@ from run_experiments import get_condition_preview_images, run_experiments
 from stats_summary import generate_stats_report
 from symbolic_clock import SymbolicDetectionError, interpret_clock_image
 
+# Process: Filesystem Configuration
+# Title: Define project paths and ensure runtime artifact directories exist.
 BASE_DIR = Path(__file__).resolve().parent
 README_FILE = BASE_DIR / "README.md"
 SNAPSHOT_DIR = BASE_DIR / "snapshots"
@@ -43,17 +45,23 @@ ALLOWED_ARTIFACTS = {
     "stats_summary.md",
 }
 
+# Process: Concurrency Primitives
+# Title: Protect shared run state and in-memory artifacts across threads.
 RUN_LOCK = threading.Lock()
 SWEEP_RUN_LOCK = threading.Lock()
 SWEEP_STATE_LOCK = threading.Lock()
 PROCESSING_ARTIFACTS_LOCK = threading.Lock()
 
+# Process: In-Memory Processing Artifacts
+# Title: Cache generated image/stage artifacts for API retrieval.
 PROCESSING_ARTIFACTS = {
     "processed_image_png": None,
     "processed_stages_payload": None,
     "processed_stages_json": None,
 }
 
+# Process: Sweep State Store
+# Title: Track long-running experiment status for progress polling.
 SWEEP_STATE = {
     "runId": None,
     "running": False,
@@ -68,9 +76,13 @@ SWEEP_STATE = {
     "summaryPreview": "",
 }
 
+# Process: Flask App Initialization
+# Title: Create the web application with template/static roots.
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
 
+# Process: Environment Parsing Utility
+# Title: Read positive integer config from environment variables.
 def _read_positive_int_env(name: str) -> Optional[int]:
     raw_value = os.getenv(name, "").strip()
     if not raw_value:
@@ -85,11 +97,15 @@ def _read_positive_int_env(name: str) -> Optional[int]:
 REALTIME_CAPTURE_MAX_SECONDS = _read_positive_int_env("REALTIME_CAPTURE_MAX_SECONDS")
 
 
+# Process: Static Directory Guard
+# Title: Ensure static directory exists before file operations.
 def _ensure_static_dir() -> Path:
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     return STATIC_DIR
 
 
+# Process: Image Payload Decoding
+# Title: Convert base64 payload into an OpenCV BGR image array.
 def _decode_image_payload(image_payload: str) -> np.ndarray:
     if not isinstance(image_payload, str) or not image_payload.strip():
         raise ValueError("No image payload provided")
@@ -110,6 +126,8 @@ def _decode_image_payload(image_payload: str) -> np.ndarray:
     return image
 
 
+# Process: Frame Encoding Utility
+# Title: Encode an OpenCV frame to base64 PNG text.
 def _encode_frame_to_base64(frame: np.ndarray) -> str:
     success, encoded_buffer = cv2.imencode(".png", frame)
     if not success:
@@ -117,6 +135,8 @@ def _encode_frame_to_base64(frame: np.ndarray) -> str:
     return base64.b64encode(encoded_buffer).decode("ascii")
 
 
+# Process: Lightweight Markdown Rendering
+# Title: Render README markdown subset into safe HTML.
 def _render_readme_markdown(markdown_text: str) -> str:
     """Render a limited markdown subset used by README.md without extra dependencies."""
     lines = markdown_text.splitlines()
@@ -274,6 +294,8 @@ def _render_readme_markdown(markdown_text: str) -> str:
     return "\n".join(html_parts)
 
 
+# Process: README Title Extraction
+# Title: Determine display title from markdown heading/content.
 def _extract_readme_title(readme_text: str) -> str:
     for raw_line in readme_text.splitlines():
         stripped = raw_line.strip()
@@ -285,6 +307,8 @@ def _extract_readme_title(readme_text: str) -> str:
     return "Project README"
 
 
+# Process: README Section Parsing
+# Title: Split README into structured sections for template rendering.
 def _build_readme_sections(readme_text: str) -> tuple[str, str, list[dict[str, str]]]:
     title = _extract_readme_title(readme_text)
     lines = readme_text.splitlines()
@@ -324,6 +348,8 @@ def _build_readme_sections(readme_text: str) -> tuple[str, str, list[dict[str, s
     return title, subtitle, sections
 
 
+# Process: Stage Entry Construction
+# Title: Build encoded frame metadata and optional dense pixel data.
 def _build_stage_entry(frame: np.ndarray, encode_frame=None, include_dense_data: bool = True) -> dict:
     frame_for_encoding = encode_frame if encode_frame is not None else frame
     numeric_frame = np.asarray(frame)
@@ -341,15 +367,21 @@ def _build_stage_entry(frame: np.ndarray, encode_frame=None, include_dense_data:
     return entry
 
 
+# Process: Preprocessing Payload Generation
+# Title: Compute intermediate CV stages, vectors, masks, and debug info.
 def _build_preprocessing_stage_payload(
     image_payload: str,
     flipped: bool = False,
     include_dense_data: bool = True,
 ) -> dict:
+    # Process: Source Decode and Orientation
+    # Title: Decode incoming image and apply mirror correction when requested.
     source_bgr = _decode_image_payload(image_payload)
     if flipped:
         source_bgr = cv2.flip(source_bgr, 1)
 
+    # Process: Core CV Pipeline
+    # Title: Create RGB, grayscale, blur, threshold, and edge representations.
     rgb_frame = cv2.cvtColor(source_bgr, cv2.COLOR_BGR2RGB)
     gray_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2GRAY)
     blur_frame = cv2.GaussianBlur(gray_frame, (5, 5), 0)
@@ -366,6 +398,8 @@ def _build_preprocessing_stage_payload(
     crop_box = [0, 0, rgb_frame.shape[1], rgb_frame.shape[0]]
     clock_center_vector = [rgb_frame.shape[1] / 2.0, rgb_frame.shape[0] / 2.0]
 
+    # Process: Dominant Contour Selection
+    # Title: Identify primary clock region and derive crop/center metadata.
     if contours:
         contour = max(contours, key=cv2.contourArea)
         x, y, w, h = cv2.boundingRect(contour)
@@ -377,6 +411,8 @@ def _build_preprocessing_stage_payload(
 
         cv2.drawContours(contour_mask, [contour], -1, 255, thickness=-1)
 
+    # Process: Contour Feature Extraction
+    # Title: Derive symbolic contour and bounding-box feature vectors.
     for contour in contours:
         if contour is None or len(contour) == 0:
             continue
@@ -395,6 +431,8 @@ def _build_preprocessing_stage_payload(
         aspect = float(bw / bh) if bh else 0.0
         bounding_box_vectors.append([int(bx), int(by), int(bw), int(bh), area, aspect])
 
+    # Process: Clock Crop Computation
+    # Title: Produce padded crop around largest detected contour.
     cropped_frame = rgb_frame.copy()
     if contours:
         contour = max(contours, key=cv2.contourArea)
@@ -408,6 +446,8 @@ def _build_preprocessing_stage_payload(
         if cropped_region.size > 0:
             cropped_frame = cropped_region
 
+    # Process: Crop Mask Construction
+    # Title: Build a binary mask of the selected crop region.
     crop_mask = np.zeros_like(gray_frame, dtype=np.uint8)
     crop_x, crop_y, crop_w, crop_h = crop_box
     crop_x1 = max(0, min(gray_frame.shape[1], crop_x + crop_w))
@@ -415,6 +455,8 @@ def _build_preprocessing_stage_payload(
     if crop_w > 0 and crop_h > 0 and crop_x < crop_x1 and crop_y < crop_y1:
         crop_mask[crop_y:crop_y1, crop_x:crop_x1] = 255
 
+    # Process: Hand Candidate Extraction
+    # Title: Use Hough lines near center to estimate hand angles/lengths.
     lines = cv2.HoughLinesP(edges_frame, 1, np.pi / 180.0, threshold=42, minLineLength=26, maxLineGap=8)
     hand_angle_vectors = []
     if lines is not None:
@@ -436,6 +478,8 @@ def _build_preprocessing_stage_payload(
             length = float(np.hypot(far_x - near_x, far_y - near_y))
             hand_angle_vectors.append([angle, length])
 
+            # Process: Stage Payload Assembly
+            # Title: Package intermediate frame outputs for downstream inspection.
     stage_payload = {
         "rgb": _build_stage_entry(
             rgb_frame,
@@ -458,6 +502,8 @@ def _build_preprocessing_stage_payload(
         ),
     }
 
+    # Process: Symbolic and Debug Assembly
+    # Title: Attach feature vectors and diagnostic metadata to payload.
     payload = {
         **stage_payload,
         "symbolic_vectors": {
@@ -479,6 +525,8 @@ def _build_preprocessing_stage_payload(
         },
     }
 
+    # Process: Optional Dense Masks
+    # Title: Include mask arrays only when dense export is enabled.
     if include_dense_data:
         payload["masks"] = {
             "otsu": thresh_frame.tolist(),
@@ -496,12 +544,16 @@ def _build_preprocessing_stage_payload(
     return payload
 
 
+# Process: Stage-Inclusion Policy
+# Title: Resolve whether preprocessing stages should be included in response.
 def _should_include_processing_stages(include_processing_stages: Optional[bool]) -> bool:
     if include_processing_stages is None:
         return True
     return bool(include_processing_stages)
 
 
+# Process: Stage Artifact Caching
+# Title: Build preprocessing payload and cache JSON bytes in memory.
 def _save_processed_stages_data_json(
     image_payload: str,
     flipped: bool = False,
@@ -519,6 +571,8 @@ def _save_processed_stages_data_json(
     return PROCESSED_STAGES_DATA_JSON_FILE
 
 
+# Process: Processed Preview Rendering
+# Title: Create a compact OpenCV visualization of key detection cues.
 def _build_opencv_processed_frame(image_payload: str, flipped: bool = False) -> np.ndarray:
     source_image = _decode_image_payload(image_payload)
     if flipped:
@@ -544,6 +598,8 @@ def _build_opencv_processed_frame(image_payload: str, flipped: bool = False) -> 
     return processed_cv_frame
 
 
+# Process: Processed Image Caching
+# Title: Encode processed preview frame and store PNG bytes in memory.
 def _save_processed_image(image_payload: str, flipped: bool = False) -> Path:
     processed_cv_frame = _build_opencv_processed_frame(image_payload, flipped=flipped)
     success, encoded = cv2.imencode(".png", processed_cv_frame)
@@ -554,6 +610,8 @@ def _save_processed_image(image_payload: str, flipped: bool = False) -> Path:
     return PROCESSED_IMAGE_FILE
 
 
+# Process: Symbolic Response Construction
+# Title: Run symbolic inference from payload and shape API response object.
 def _build_symbolic_response_from_payload(
     image_payload: str,
     save_image: bool,
@@ -562,6 +620,8 @@ def _build_symbolic_response_from_payload(
     hand_color_hints: Optional[dict] = None,
     realtime_mode: bool = False,
 ) -> dict:
+    # Process: Input Decode and Orientation
+    # Title: Decode payload image and apply optional mirroring.
     source_image = _decode_image_payload(image_payload)
     if flipped:
         source_image = cv2.flip(source_image, 1)
@@ -575,11 +635,15 @@ def _build_symbolic_response_from_payload(
     if save_image:
         _save_processed_image(image_payload, flipped=flipped)
 
+    # Process: Temporary Image Bridge
+    # Title: Persist decoded image to temp file for symbolic engine input.
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as handle:
         temp_path = Path(handle.name)
     cv2.imwrite(str(temp_path), source_image)
 
     try:
+        # Process: Symbolic Interpretation
+        # Title: Execute clock hand/time extraction with optional color hints.
         symbolic = interpret_clock_image(
             temp_path,
             was_flipped=False,
@@ -590,11 +654,15 @@ def _build_symbolic_response_from_payload(
     except RuntimeError as exc:
         raise exc
     finally:
+        # Process: Temporary Cleanup
+        # Title: Remove temporary file even when inference fails.
         try:
             temp_path.unlink(missing_ok=True)
         except OSError:
             pass
 
+    # Process: Orientation Annotation
+    # Title: Attach mirror/orientation metadata to symbolic output.
     symbolic["was_mirrored"] = bool(flipped)
     symbolic["image_orientation"] = "MIRRORED" if flipped else "NORMAL"
 
@@ -610,10 +678,14 @@ def _build_symbolic_response_from_payload(
     return response_payload
 
 
+# Process: Snapshot Metadata Persistence
+# Title: Store flip/orientation metadata for saved snapshots.
 def _save_snapshot_metadata(flipped: bool) -> None:
     META_FILE.write_text(json.dumps({"flipped": bool(flipped)}), encoding="utf-8")
 
 
+# Process: Snapshot Metadata Loading
+# Title: Read saved snapshot metadata with safe fallback defaults.
 def _load_snapshot_metadata() -> dict:
     if not META_FILE.exists():
         return {"flipped": False}
@@ -624,6 +696,8 @@ def _load_snapshot_metadata() -> dict:
         return {"flipped": False}
 
 
+# Process: Request Field Extraction
+# Title: Normalize symbolic endpoint request payload fields.
 def _extract_symbolic_request_fields(
     payload: dict,
 ) -> tuple[str, bool, bool, Optional[bool], Optional[dict], bool]:
@@ -636,6 +710,8 @@ def _extract_symbolic_request_fields(
     return image_payload, save_image, flipped, include_processing_stages, hand_color_hints, realtime_mode
 
 
+# Process: Processing Error Mapping
+# Title: Convert processing exceptions to structured HTTP responses.
 def _processing_error_response(exc: Exception, allow_value_error: bool = False):
     if isinstance(exc, SymbolicDetectionError):
         return jsonify({
@@ -649,6 +725,8 @@ def _processing_error_response(exc: Exception, allow_value_error: bool = False):
     return jsonify({"error": f"Unexpected processing error: {exc}"}), 500
 
 
+# Process: Filesystem Removal Utility
+# Title: Remove a file or directory when it exists.
 def _remove_generated_path(path: Path) -> bool:
     if not path.exists():
         return False
@@ -661,6 +739,8 @@ def _remove_generated_path(path: Path) -> bool:
     return True
 
 
+# Process: Global Artifact Cleanup
+# Title: Clear generated files, caches, and optionally sweep state.
 def _clear_generated_artifacts(preserve_experiment_data: bool = False) -> dict:
     removed: list[str] = []
 
@@ -708,6 +788,8 @@ def _clear_generated_artifacts(preserve_experiment_data: bool = False) -> dict:
     }
 
 
+# Process: Experiment-Only Cleanup
+# Title: Remove sweep outputs and reset sweep state only.
 def _clear_experiment_artifacts() -> dict:
     removed: list[str] = []
 
@@ -736,6 +818,8 @@ def _clear_experiment_artifacts() -> dict:
     }
 
 
+# Process: CORS Middleware
+# Title: Add permissive cross-origin headers to every response.
 @app.after_request
 def add_cors_headers(response):
     response.headers["Access-Control-Allow-Origin"] = "*"
@@ -744,6 +828,8 @@ def add_cors_headers(response):
     return response
 
 
+# Process: Home Page Endpoint
+# Title: Render main UI with runtime configuration.
 @app.route("/", methods=["GET"])
 def index():
     return render_template(
@@ -754,6 +840,8 @@ def index():
     )
 
 
+# Process: Project README Endpoint
+# Title: Render README content as sectioned HTML view.
 @app.route("/project-readme", methods=["GET"])
 def project_readme():
     try:
@@ -771,6 +859,8 @@ def project_readme():
     )
 
 
+# Process: Markdown Document Endpoint
+# Title: Safely render markdown files constrained to project root.
 @app.route("/docs/<path:doc_name>", methods=["GET"])
 def readme_document(doc_name: str):
     if not doc_name.lower().endswith(".md"):
@@ -801,16 +891,22 @@ def readme_document(doc_name: str):
     )
 
 
+# Process: Legacy README Alias Endpoint
+# Title: Serve custom project markdown document alias.
 @app.route("/CUSTON-MINI-PROJECT.md", methods=["GET"])
 def custon_mini_project_document():
     return readme_document("CUSTON-MINI-PROJECT.md")
 
 
+# Process: Legacy Assessment Alias Endpoint
+# Title: Serve assessment markdown document alias.
 @app.route("/ASSESSMENT-COMPONENTS..md", methods=["GET"])
 def assessment_components_document():
     return readme_document("ASSESSMENT-COMPONENTS..md")
 
 
+# Process: Processed Image Artifact Endpoint
+# Title: Return latest cached processed image preview.
 @app.route(PROCESSED_IMAGE_ARTIFACT_URL, methods=["GET"])
 def processed_image_artifact():
     with PROCESSING_ARTIFACTS_LOCK:
@@ -827,6 +923,8 @@ def processed_image_artifact():
     )
 
 
+# Process: Processed Stages Artifact Endpoint
+# Title: Return latest cached preprocessing stages JSON.
 @app.route(PROCESSED_STAGES_ARTIFACT_URL, methods=["GET"])
 def processed_stages_artifact():
     with PROCESSING_ARTIFACTS_LOCK:
@@ -838,6 +936,8 @@ def processed_stages_artifact():
     return app.response_class(stages_json, mimetype="application/json")
 
 
+# Process: Snapshot Save Endpoint
+# Title: Persist captured image bytes and mirror metadata.
 @app.route("/save-image", methods=["POST", "OPTIONS"])
 def save_image():
     if request.method == "OPTIONS":
@@ -865,6 +965,8 @@ def save_image():
     })
 
 
+# Process: Symbolic Clock Endpoint
+# Title: Resolve symbolic time from payload image or saved snapshot.
 @app.route("/symbolic-clock", methods=["POST", "OPTIONS"])
 def symbolic_clock():
     if request.method == "OPTIONS":
@@ -904,6 +1006,8 @@ def symbolic_clock():
     return jsonify(symbolic)
 
 
+# Process: Vision Clock Endpoint
+# Title: Require payload image and return structured symbolic response.
 @app.route("/vision/clock", methods=["POST", "OPTIONS"])
 def vision_clock():
     if request.method == "OPTIONS":
@@ -929,6 +1033,8 @@ def vision_clock():
         return _processing_error_response(exc, allow_value_error=True)
 
 
+# Process: Experiment Sweep Start Endpoint
+# Title: Validate parameters, enqueue worker, and return run token.
 @app.route("/run-experiments", methods=["POST", "OPTIONS"])
 def run_experiments_endpoint():
     if request.method == "OPTIONS":
@@ -1003,11 +1109,15 @@ def run_experiments_endpoint():
     ), 202
 
 
+# Process: Sweep State Mutation Helper
+# Title: Apply atomic updates to shared sweep state.
 def _set_sweep_state(**kwargs) -> None:
     with SWEEP_STATE_LOCK:
         SWEEP_STATE.update(kwargs)
 
 
+    # Process: Background Sweep Worker
+    # Title: Execute experiments, run stats, and publish completion state.
 def _sweep_worker(
     run_id: str,
     samples_per_condition: int,
@@ -1019,6 +1129,8 @@ def _sweep_worker(
     second_tol: int,
 ) -> None:
     try:
+        # Process: Experiment Phase
+        # Title: Generate condition matrix and per-sample metrics.
         _set_sweep_state(stage="running", percent=10, message="Generating condition samples")
         condition_matrix_path, metrics_path, stats_path = run_experiments(
             output_dir=RESULTS_DIR,
@@ -1032,6 +1144,8 @@ def _sweep_worker(
             stats_iterations=stats_iterations,
         )
 
+        # Process: Statistical Phase
+        # Title: Compute summary statistics from generated metrics.
         _set_sweep_state(stage="stats", percent=70, message="Running statistical tests")
         stats_md_path = RESULTS_DIR / "stats_summary.md"
         stats_csv_path = RESULTS_DIR / "stats_by_condition.csv"
@@ -1044,6 +1158,8 @@ def _sweep_worker(
             seed=seed,
         )
 
+        # Process: Completion Publishing
+        # Title: Mark run successful and expose summary preview.
         summary_preview = stats_md_path.read_text(encoding="utf-8") if stats_md_path.exists() else ""
 
         _set_sweep_state(
@@ -1059,6 +1175,8 @@ def _sweep_worker(
             summaryPreview=summary_preview,
         )
     except Exception as exc:
+        # Process: Failure Publishing
+        # Title: Record worker failure details for client polling.
         _set_sweep_state(
             runId=run_id,
             running=False,
@@ -1070,15 +1188,21 @@ def _sweep_worker(
             finishedAt=int(time.time()),
         )
     finally:
+        # Process: Lock Release
+        # Title: Always release exclusive sweep execution lock.
         SWEEP_RUN_LOCK.release()
 
 
+# Process: Condition Preview Endpoint
+# Title: Return synthetic thumbnails for all sweep conditions.
 @app.route("/sweep-condition-previews", methods=["GET"])
 def sweep_condition_previews():
     previews = get_condition_preview_images()
     return jsonify({"conditions": previews})
 
 
+# Process: Sweep Progress Endpoint
+# Title: Return current state of background experiment run.
 @app.route("/sweep-progress", methods=["GET"])
 def sweep_progress():
     with SWEEP_STATE_LOCK:
@@ -1086,6 +1210,8 @@ def sweep_progress():
     return jsonify(state)
 
 
+# Process: Artifact Inventory Endpoint
+# Title: Report existence and size for downloadable experiment artifacts.
 @app.route("/experiment-artifacts", methods=["GET"])
 def experiment_artifacts():
     artifacts = []
@@ -1101,6 +1227,8 @@ def experiment_artifacts():
     return jsonify({"artifacts": artifacts})
 
 
+# Process: Summary Endpoint
+# Title: Return markdown summary text if available.
 @app.route("/experiment-summary", methods=["GET"])
 def experiment_summary():
     summary_path = RESULTS_DIR / "stats_summary.md"
@@ -1110,6 +1238,8 @@ def experiment_summary():
     return jsonify({"summary": summary_path.read_text(encoding="utf-8")})
 
 
+# Process: Global Clear Endpoint
+# Title: Clear generated runtime artifacts with optional sweep preservation.
 @app.route("/clear-generated-data", methods=["POST", "OPTIONS"])
 def clear_generated_data():
     if request.method == "OPTIONS":
@@ -1124,6 +1254,8 @@ def clear_generated_data():
         return jsonify({"error": f"Failed to clear generated data: {exc}"}), 500
 
 
+# Process: Experiment Clear Endpoint
+# Title: Clear experiment outputs and reset sweep lifecycle state.
 @app.route("/clear-experiment-data", methods=["POST", "OPTIONS"])
 def clear_experiment_data():
     if request.method == "OPTIONS":
@@ -1135,6 +1267,8 @@ def clear_experiment_data():
         return jsonify({"error": f"Failed to clear experiment data: {exc}"}), 500
 
 
+# Process: Artifact Download Endpoint
+# Title: Serve whitelisted experiment artifacts as attachments.
 @app.route("/experiment-artifact/<path:artifact_name>", methods=["GET"])
 def experiment_artifact_download(artifact_name: str):
     if artifact_name not in ALLOWED_ARTIFACTS:
@@ -1147,6 +1281,8 @@ def experiment_artifact_download(artifact_name: str):
     return send_file(artifact_path, as_attachment=True, download_name=artifact_name)
 
 
+# Process: Application Entrypoint
+# Title: Start Flask server with optional debug/reloader mode.
 if __name__ == "__main__":
     debug_mode = os.environ.get("CLOCK_DEBUG", "0") == "1"
     app.run(host="0.0.0.0", port=5014, debug=debug_mode, use_reloader=debug_mode)

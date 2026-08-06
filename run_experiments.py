@@ -18,6 +18,8 @@ from stats_summary import generate_stats_report
 
 @dataclass(frozen=True)
 class Condition:
+    # Process: Condition Schema
+    # Title: Define one perturbation condition and its transform contract.
     condition_id: str
     family: str
     severity: str
@@ -25,6 +27,8 @@ class Condition:
     transform: Callable[[np.ndarray, random.Random], Tuple[np.ndarray, bool]]
 
 
+# Process: Clock Geometry Utility
+# Title: Convert polar hand angle into Cartesian pixel coordinates.
 def angle_to_point(center: Tuple[int, int], length: int, angle_deg: float) -> Tuple[int, int]:
     theta = np.deg2rad(angle_deg)
     x = int(round(center[0] + np.sin(theta) * length))
@@ -32,6 +36,8 @@ def angle_to_point(center: Tuple[int, int], length: int, angle_deg: float) -> Tu
     return x, y
 
 
+# Process: Synthetic Clock Rendering
+# Title: Draw a complete analog clock image from hour/minute/second values.
 def make_synthetic_clock_image(hour: int, minute: int, second: int, size: int) -> np.ndarray:
     image = np.full((size, size, 3), 255, dtype=np.uint8)
     center = (size // 2, size // 2)
@@ -56,25 +62,35 @@ def make_synthetic_clock_image(hour: int, minute: int, second: int, size: int) -
     return image
 
 
+# Process: Cyclic Error Metric (Minute)
+# Title: Compute wrapped minute distance on a 60-step dial.
 def cyclic_minute_delta(a: int, b: int) -> int:
     raw = abs((a % 60) - (b % 60))
     return min(raw, 60 - raw)
 
 
+# Process: Cyclic Error Metric (Hour)
+# Title: Compute wrapped hour distance on a 12-step dial.
 def cyclic_hour_delta(a: int, b: int) -> int:
     raw = abs((a % 12) - (b % 12))
     return min(raw, 12 - raw)
 
 
+# Process: Cyclic Error Metric (Second)
+# Title: Compute wrapped second distance on a 60-step dial.
 def cyclic_second_delta(a: int, b: int) -> int:
     raw = abs((a % 60) - (b % 60))
     return min(raw, 60 - raw)
 
 
+# Process: Identity Transform
+# Title: Return the original image for baseline evaluation.
 def _identity(image: np.ndarray, _rng: random.Random) -> Tuple[np.ndarray, bool]:
     return image.copy(), False
 
 
+# Process: Rotation Transform Factory
+# Title: Build a deterministic image rotation transform.
 def _rotate(degrees: float) -> Callable[[np.ndarray, random.Random], Tuple[np.ndarray, bool]]:
     def _inner(image: np.ndarray, _rng: random.Random) -> Tuple[np.ndarray, bool]:
         h, w = image.shape[:2]
@@ -86,6 +102,8 @@ def _rotate(degrees: float) -> Callable[[np.ndarray, random.Random], Tuple[np.nd
     return _inner
 
 
+# Process: Blur Transform Factory
+# Title: Build a Gaussian blur transform parameterized by kernel size.
 def _gaussian_blur(ksize: int) -> Callable[[np.ndarray, random.Random], Tuple[np.ndarray, bool]]:
     def _inner(image: np.ndarray, _rng: random.Random) -> Tuple[np.ndarray, bool]:
         return cv2.GaussianBlur(image, (ksize, ksize), 0), False
@@ -93,6 +111,8 @@ def _gaussian_blur(ksize: int) -> Callable[[np.ndarray, random.Random], Tuple[np
     return _inner
 
 
+# Process: Noise Transform Factory
+# Title: Add seeded Gaussian noise for reproducible corruption.
 def _noise(std_dev: float) -> Callable[[np.ndarray, random.Random], Tuple[np.ndarray, bool]]:
     def _inner(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray, bool]:
         noise_rng = np.random.default_rng(rng.randint(0, 2**31 - 1))
@@ -103,6 +123,8 @@ def _noise(std_dev: float) -> Callable[[np.ndarray, random.Random], Tuple[np.nda
     return _inner
 
 
+# Process: Artifact Injection
+# Title: Draw a random distractor line to simulate spurious edges.
 def _distractor_line(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray, bool]:
     out = image.copy()
     h, w = out.shape[:2]
@@ -114,14 +136,20 @@ def _distractor_line(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray,
     return out, False
 
 
+# Process: Mirroring (Tracked)
+# Title: Mirror image and flag orientation metadata as flipped.
 def _mirror_tracked(image: np.ndarray, _rng: random.Random) -> Tuple[np.ndarray, bool]:
     return cv2.flip(image, 1), True
 
 
+# Process: Mirroring (Untracked)
+# Title: Mirror image without metadata correction to stress orientation handling.
 def _mirror_untracked(image: np.ndarray, _rng: random.Random) -> Tuple[np.ndarray, bool]:
     return cv2.flip(image, 1), False
 
 
+# Process: Occlusion Injection
+# Title: Add a local bright patch to simulate partial hand occlusion.
 def _occlusion_patch(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray, bool]:
     out = image.copy()
     h, w = out.shape[:2]
@@ -133,6 +161,8 @@ def _occlusion_patch(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray,
     return out, False
 
 
+# Process: Composite Stress Transform
+# Title: Chain multiple degradations into a high-difficulty condition.
 def _combined_stress(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray, bool]:
     rotated, _ = _rotate(12.0)(image, rng)
     blurred, _ = _gaussian_blur(5)(rotated, rng)
@@ -141,6 +171,8 @@ def _combined_stress(image: np.ndarray, rng: random.Random) -> Tuple[np.ndarray,
     return lined, False
 
 
+# Process: Condition Catalogue
+# Title: Enumerate all benchmark conditions with family and severity labels.
 def build_conditions() -> List[Condition]:
     return [
         Condition("baseline_clean", "baseline", "none", "Clean synthetic render", _identity),
@@ -156,6 +188,8 @@ def build_conditions() -> List[Condition]:
     ]
 
 
+# Process: Condition Preview Generation
+# Title: Render one encoded thumbnail per condition for UI display.
 def get_condition_preview_images(
     hour: int = 10,
     minute: int = 10,
@@ -166,11 +200,15 @@ def get_condition_preview_images(
     """Return one base64 PNG thumbnail per condition for UI display."""
     import base64 as _base64
 
+    # Process: Preview Setup
+    # Title: Seed RNG, prepare base image, and iterate all conditions.
     rng = random.Random(seed)
     conditions = build_conditions()
     base_image = make_synthetic_clock_image(hour, minute, second, image_size)
     previews = []
     for condition in conditions:
+        # Process: Preview Encoding
+        # Title: Encode transformed preview as PNG/JPEG data URI.
         transformed, _ = condition.transform(base_image, rng)
         mime_type = "image/png"
         ok, buf = cv2.imencode(".png", transformed)
@@ -192,6 +230,8 @@ def get_condition_preview_images(
     return previews
 
 
+# Process: Condition Matrix Export
+# Title: Persist condition metadata table for reproducibility.
 def write_condition_matrix(path: Path, conditions: List[Condition]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -201,6 +241,8 @@ def write_condition_matrix(path: Path, conditions: List[Condition]) -> None:
             writer.writerow([condition.condition_id, condition.family, condition.severity, condition.description])
 
 
+# Process: Failure Classification
+# Title: Map exceptions to stable failure categories for reporting.
 def classify_failure(exc: Exception) -> str:
     if isinstance(exc, SymbolicDetectionError):
         return "symbolic_detection_error"
@@ -209,6 +251,8 @@ def classify_failure(exc: Exception) -> str:
     return "unexpected_error"
 
 
+# Process: Experiment Orchestration
+# Title: Run synthetic robustness sweeps and write experiment artifacts.
 def run_experiments(
     output_dir: Path,
     samples_per_condition: int,
@@ -220,6 +264,8 @@ def run_experiments(
     with_stats: bool,
     stats_iterations: int,
 ) -> Tuple[Path, Path, Path]:
+    # Process: Run Initialization
+    # Title: Seed randomness, load conditions, and prepare output paths.
     rng = random.Random(seed)
     conditions = build_conditions()
 
@@ -231,6 +277,8 @@ def run_experiments(
 
     write_condition_matrix(condition_matrix_path, conditions)
 
+    # Process: Metrics Schema
+    # Title: Define CSV columns for per-sample outcome logging.
     fieldnames = [
         "run_id",
         "run_timestamp_utc",
@@ -265,12 +313,16 @@ def run_experiments(
     run_id = datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%SZ")
     run_timestamp = datetime.now(timezone.utc).isoformat()
 
+    # Process: Sample Evaluation Loop
+    # Title: Generate, transform, infer, and record one row per sample.
     with metrics_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
 
         for condition in conditions:
             for sample_idx in range(samples_per_condition):
+                # Process: Synthetic Target Sampling
+                # Title: Draw a random ground-truth time and render base image.
                 expected_hour = rng.randint(1, 12)
                 expected_minute = rng.randint(0, 59)
                 expected_second = rng.randint(0, 59)
@@ -283,6 +335,8 @@ def run_experiments(
 
                 transformed, was_flipped = condition.transform(base_image, rng)
 
+                # Process: Row Initialization
+                # Title: Initialize output row before inference attempt.
                 row = {
                     "run_id": run_id,
                     "run_timestamp_utc": run_timestamp,
@@ -318,6 +372,8 @@ def run_experiments(
                     temp_path = Path(temp_file.name)
 
                 try:
+                    # Process: Inference Execution
+                    # Title: Run symbolic clock interpretation on transformed image.
                     if not cv2.imwrite(str(temp_path), transformed):
                         raise RuntimeError("Failed to write temporary experiment image")
 
@@ -326,6 +382,8 @@ def run_experiments(
                     pred_minute = int(symbolic.get("MINUTE_HAND", -1))
                     pred_second = int(symbolic.get("SECOND_HAND", -1))
 
+                    # Process: Error and Success Scoring
+                    # Title: Compute cyclic errors and tolerance/exact-match flags.
                     hour_error = cyclic_hour_delta(pred_hour, expected_hour)
                     minute_error = cyclic_minute_delta(pred_minute, expected_minute)
                     second_error = cyclic_second_delta(pred_second, expected_second)
@@ -344,6 +402,8 @@ def run_experiments(
 
                     debug_metrics = symbolic.get("debug_metrics") or {}
 
+                    # Process: Successful Row Update
+                    # Title: Store predictions and diagnostic metadata.
                     row.update(
                         {
                             "pred_hour": pred_hour,
@@ -366,6 +426,8 @@ def run_experiments(
                     )
 
                 except Exception as exc:
+                    # Process: Failure Row Update
+                    # Title: Record classified failure type and trimmed message.
                     row.update(
                         {
                             "failure_type": classify_failure(exc),
@@ -373,10 +435,14 @@ def run_experiments(
                         }
                     )
                 finally:
+                    # Process: Temporary File Cleanup
+                    # Title: Remove intermediate image artifact regardless of outcome.
                     temp_path.unlink(missing_ok=True)
 
                 writer.writerow(row)
 
+    # Process: Statistical Post-Analysis
+    # Title: Optionally compute significance and effect-size summaries.
     if with_stats:
         generate_stats_report(
             metrics_csv=metrics_path,
@@ -390,6 +456,8 @@ def run_experiments(
     return condition_matrix_path, metrics_path, stats_md_path
 
 
+# Process: CLI Entrypoint
+# Title: Parse arguments, execute experiments, and print artifact locations.
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run reproducible robustness sweeps for symbolic clock extraction")
     parser.add_argument("--output-dir", type=Path, default=Path("results"), help="Directory for generated artifacts")
