@@ -1,0 +1,40 @@
+flowchart TD
+    op2["import math"]
+    op4["from pathlib import Path"]
+    op6["from typing import Dict, List, Optional, Tuple, Union"]
+    op8["import cv2"]
+    op10["import numpy as np"]
+    op12["from probabilistic_logic_reasoner import ProbabilisticLogicClockReasoner"]
+    op14["LineCandidate = Dict[str, float]"]
+    op16["ColorRange = Tuple[Tuple[int, int, int], Tuple[int, int, int]]"]
+    op18["HOUR_HAND_COLOR_RANGES: Tuple[ColorRange, ...] = (((96, 60, 55), (116, 255, 98)), ((72, 90, 50), (86, 160, 86)), ((34, 95, 55), (48, 160, 85)), ((5, 100, 65), (20, 160, 96)), ((160, 120, 65), (179, 200, 96)))"]
+    op20["MINUTE_HAND_COLOR_RANGES: Tuple[ColorRange, ...] = (((94, 55, 96), (116, 255, 165)), ((72, 90, 88), (86, 160, 118)), ((34, 95, 88), (48, 160, 124)), ((5, 100, 96), (20, 165, 132)), ((160, 110, 100), (179, 190, 140)))"]
+    op22["SECOND_HAND_COLOR_RANGES: Tuple[ColorRange, ...] = (((0, 150, 150), (20, 255, 255)), ((96, 170, 145), (106, 210, 220)), ((36, 160, 160), (48, 210, 210)))"]
+    op24["class SymbolicDetectionError(RuntimeError):\n\ndef __init__(self, message: str, debug_metrics: Optional[Dict[str, Union[int, bool, str, List[float]]]]=None):\n    super().__init__(message)\n    self.debug_metrics = debug_metrics or {}"]
+    st27(["start _clock_angle_from_tip"])
+    io29[/"input: center, tip"/]
+    op32["dx = tip[0] - center[0]"]
+    op34["dy = center[1] - tip[1]"]
+    op36["angle = math.degrees(math.atan2(dx, dy)) % 360.0"]
+    io41[/"output: angle"/]
+    e39(["end function return"])
+
+    op2 --> op4
+    op4 --> op6
+    op6 --> op8
+    op8 --> op10
+    op10 --> op12
+    op12 --> op14
+    op14 --> op16
+    op16 --> op18
+    op18 --> op20
+    op20 --> op22
+    op22 --> op24
+    op24 --> st27
+    st27 --> io29
+    io29 --> op32
+    op32 --> op34
+    op34 --> op36
+    op36 --> io41
+    io41 --> e39
+

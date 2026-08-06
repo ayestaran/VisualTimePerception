@@ -1,0 +1,34 @@
+flowchart TD
+	op2["import argparse"]
+	op4["import base64"]
+	op6["import json"]
+	op8["import sys"]
+	op10["import urllib.error"]
+	op12["import urllib.request"]
+	op14["from typing import Dict, Tuple"]
+	op16["import cv2"]
+	op18["import numpy as np"]
+	st21(["start angle_to_point"])
+	io23[/"input: center, length, angle_deg"/]
+	op26["theta = np.deg2rad(angle_deg)"]
+	op28["x = int(round(center[0] + np.sin(theta) * length))"]
+	op30["y = int(round(center[1] - np.cos(theta) * length))"]
+	io35[/"output: (x, y)"/]
+	e33(["end function return"])
+
+	op2 --> op4
+	op4 --> op6
+	op6 --> op8
+	op8 --> op10
+	op10 --> op12
+	op12 --> op14
+	op14 --> op16
+	op16 --> op18
+	op18 --> st21
+	st21 --> io23
+	io23 --> op26
+	op26 --> op28
+	op28 --> op30
+	op30 --> io35
+	io35 --> e33
+

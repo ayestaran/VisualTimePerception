@@ -1,0 +1,20 @@
+flowchart TD
+	op2["import math"]
+	op4["from dataclasses import dataclass"]
+	op6["from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple"]
+	op8["Assignment = Dict[str, int]"]
+	st11(["start circular_delta"])
+	io13[/"input: value_a, value_b, period"/]
+	op16["raw = abs(value_a % period - value_b % period)"]
+	io21[/"output: min(raw, period - raw)"/]
+	e19(["end function return"])
+
+	op2 --> op4
+	op4 --> op6
+	op6 --> op8
+	op8 --> st11
+	st11 --> io13
+	io13 --> op16
+	op16 --> io21
+	io21 --> e19
+

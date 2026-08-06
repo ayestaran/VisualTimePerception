@@ -1,0 +1,22 @@
+flowchart TD
+	op2["import json"]
+	op4["from pathlib import Path"]
+	op6["from typing import Any, Iterable, List, Optional"]
+	st9(["start read_json_file"])
+	io11[/"input: path, default"/]
+	cond15{"if not path.exists()"}
+	io22[/"output: default"/]
+	e20(["end function return"])
+	io34[/"output: json.loads(path.read_text(encoding='utf-8'))"/]
+	e32(["end function return"])
+
+	op2 --> op4
+	op4 --> op6
+	op6 --> st9
+	st9 --> io11
+	io11 --> cond15
+	cond15 -- yes --> io22
+	io22 --> e20
+	cond15 -- no --> io34
+	io34 --> e32
+
