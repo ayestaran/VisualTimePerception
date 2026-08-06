@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph A["A. Setup / Prerequisites"]
+        launch_sh["launch.sh"]
+        prerequisites_sh["prerequisites.sh"]
+        requirements_txt["requirements.txt"]
+    end
+
+    subgraph B["B. Symbolic & Theoretical Layer"]
+        symbolic_clock_py["symbolic_clock.py"]
+        probabilistic_logic_reasoner_py["probabilistic_logic_reasoner.py"]
+        project_utils_py["project_utils.py"]
+    end
+
+    subgraph C["C. Experimental Evaluation"]
+        run_experiments_py["run_experiments.py"]
+        stats_summary_py["stats_summary.py"]
+    end
+
+    subgraph D["D. Integration & UI Harness"]
+        app_py["app.py"]
+        templates_index_html["templates/index.html"]
+    end
+
+    requirements_txt --> symbolic_clock_py
+    symbolic_clock_py --> probabilistic_logic_reasoner_py
+    probabilistic_logic_reasoner_py --> run_experiments_py
+    run_experiments_py --> stats_summary_py
+    stats_summary_py --> app_py
+    app_py --> templates_index_html
