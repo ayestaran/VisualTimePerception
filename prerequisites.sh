@@ -83,6 +83,9 @@ else
   fail "requirements.txt not found in $ROOT_DIR"
 fi
 
+pip3 install matplotlib
+
 log "Setup complete"
 log "Activate env: source $VENV_DIR/bin/activate"
 log "Start app: ./launch.sh start"
+

@@ -5,9 +5,24 @@
  * Running on http://127.0.0.1:5014
  * Running on http://192.168.0.121:5014
 [33mPress CTRL+C to quit[0m
-127.0.0.1 - - [17/Aug/2026 16:05:01] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [17/Aug/2026 16:05:01] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
-127.0.0.1 - - [17/Aug/2026 16:05:01] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
-127.0.0.1 - - [17/Aug/2026 16:05:01] "GET /experiment-summary HTTP/1.1" 200 -
-127.0.0.1 - - [17/Aug/2026 16:05:01] "GET /sweep-progress HTTP/1.1" 200 -
-127.0.0.1 - - [17/Aug/2026 16:05:01] "GET /experiment-artifacts HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:42] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "GET /static/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "GET /sweep-progress HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "GET /experiment-artifacts HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "GET /experiment-summary HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:43] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET /static/app.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET /sweep-progress HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET /experiment-artifacts HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:56] "GET /experiment-summary HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 14:30:57] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+127.0.0.1 - - [05/Sep/2026 15:16:08] "GET /experiment-artifact/stats_summary.md HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "GET /sweep-progress HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "GET /experiment-summary HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2026 16:48:21] "GET /experiment-artifacts HTTP/1.1" 200 -
