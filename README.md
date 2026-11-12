@@ -6,7 +6,7 @@ This repository contains the implementation for a custom mini-project on real-ti
 
 The project was designed and authored by me. AI assisted with generating boiler‑plate Python code, but the conceptual structure, symbolic pipeline, probabilistic reasoning model, and experimental workflow were all created under my direction. I have gone through the core routines and documented them to ensure complete understanding.
 
-The README is intended to sit alongside [CUSTON-MINI-PROJECT.md](CUSTON-MINI-PROJECT.md) and [ASSESSMENT-COMPONENTS..md](ASSESSMENT-COMPONENTS.md). Those documents explain the academic framing and marking emphasis, while this document explains how the implemented system is organised, what it demonstrates, and how to run it.
+The README is intended to sit alongside [CUSTON-MINI-PROJECT.md](CUSTON-MINI-PROJECT.md) and [ASSESSMENT-COMPONENTS.md](ASSESSMENT-COMPONENTS.md). Those documents explain the academic framing and marking emphasis, while this document explains how the implemented system is organised, what it demonstrates, and how to run it.
 
 ## Project Overview
 -------------------
